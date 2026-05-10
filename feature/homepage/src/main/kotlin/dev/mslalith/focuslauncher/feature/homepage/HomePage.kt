@@ -36,6 +36,7 @@ import dev.mslalith.focuslauncher.core.common.extensions.openNotificationShade
 import dev.mslalith.focuslauncher.core.screens.HomePageScreen
 import dev.mslalith.focuslauncher.core.ui.effects.OnLifecycleEventChange
 import dev.mslalith.focuslauncher.core.ui.extensions.onSwipeDown
+import dev.mslalith.focuslauncher.core.ui.extensions.onSwipeUp
 import dev.mslalith.focuslauncher.feature.clock24.widget.ClockWidgetUiComponent
 import dev.mslalith.focuslauncher.feature.favorites.FavoritesListUiComponent
 
@@ -85,6 +86,7 @@ fun HomePage(
         onClockWidgetClick = ::openClockApp,
         onNavigateToAiScreen = { state.eventSink(HomePageUiEvent.NavigateToAiScreen) },
         onNavigateToSettings = { state.eventSink(HomePageUiEvent.NavigateToSettings) },
+        onNavigateToAppDrawer = {},
         modifier = modifier
     )
 }
@@ -124,6 +126,7 @@ fun HomePage(
     state: HomePageState,
     onNavigateToAiScreen: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToAppDrawer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -166,6 +169,7 @@ fun HomePage(
         onClockWidgetClick = ::openClockApp,
         onNavigateToAiScreen = onNavigateToAiScreen,
         onNavigateToSettings = onNavigateToSettings,
+        onNavigateToAppDrawer = onNavigateToAppDrawer,
         modifier = modifier
     )
 }
@@ -176,6 +180,7 @@ private fun HomePageContent(
     onClockWidgetClick: () -> Unit,
     onNavigateToAiScreen: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToAppDrawer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -190,6 +195,9 @@ private fun HomePageContent(
                 .padding(horizontal = 24.dp)
                 .onSwipeDown(enabled = state.isPullDownNotificationShadeEnabled) {
                     context.openNotificationShade()
+                }
+                .onSwipeUp {
+                    onNavigateToAppDrawer()
                 }
         ) {
             Spacer(modifier = Modifier.height(16.dp))

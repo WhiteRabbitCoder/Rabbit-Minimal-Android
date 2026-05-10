@@ -84,14 +84,14 @@ class LoadAllAppsUseCaseTest : CoroutineTest() {
     }
 
     @Test
-    fun `3 - when installed apps are loaded, they must not be loaded again`() = runCoroutineTest {
+    fun `3 - when installed apps are loaded, missing apps are reconciled on next load`() = runCoroutineTest {
         launcherAppsManager.setAllApps(apps = TestApps.all.toAppsWithComponents())
         useCase()
 
         assertThat(appDrawerRepo.allAppsFlow.awaitItem()).isEqualTo(TestApps.all)
 
         useCase()
-        coVerify(exactly = 1) { launcherAppsManager.loadAllApps() }
+        coVerify(exactly = 2) { launcherAppsManager.loadAllApps() }
     }
 
     @Test

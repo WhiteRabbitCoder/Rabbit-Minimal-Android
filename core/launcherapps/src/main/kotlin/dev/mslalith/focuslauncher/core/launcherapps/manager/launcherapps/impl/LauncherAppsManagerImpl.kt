@@ -1,9 +1,12 @@
 package dev.mslalith.focuslauncher.core.launcherapps.manager.launcherapps.impl
 
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.os.Process
 import android.provider.Telephony
 import android.telecom.TelecomManager
@@ -26,61 +29,59 @@ internal class LauncherAppsManagerImpl @Inject constructor(
 
     override suspend fun loadAllApps(): List<AppWithComponent> = buildList {
         val allApps = appDrawerRepo.allAppsFlow.firstOrNull().orEmpty()
-        for (launcherActivityInfo in launcherApps.getActivityList(null, Process.myUserHandle())) {
+        val launcherActivityInfos = launcherApps.getActivityList(null, Process.myUserHandle())
+        val launcherPackages = launcherActivityInfos.mapTo(mutableSetOf()) { it.applicationInfo.packageName }
+
+        for (launcherActivityInfo in launcherActivityInfos) {
             val applicationInfo = launcherActivityInfo.applicationInfo
             val localApp = allApps.find { it.packageName == applicationInfo.packageName }
-            val appWithComponent = if (localApp != null) {
-                AppWithComponent(
-                    app = localApp,
-                    componentName = launcherActivityInfo.componentName
-                )
-            } else {
-                AppWithComponent(
-                    app = App(
-                        name = applicationInfo.loadLabel(context.packageManager).toString(),
-                        packageName = applicationInfo.packageName,
-                        isSystem = applicationInfo.isSystemApp()
-                    ),
-                    componentName = launcherActivityInfo.componentName
-                )
-            }
+            val appWithComponent = appWithComponent(
+                localApp = localApp,
+                packageName = applicationInfo.packageName,
+                appName = applicationInfo.loadLabel(context.packageManager).toString(),
+                componentName = launcherActivityInfo.componentName,
+                applicationInfo = applicationInfo
+            )
             add(appWithComponent)
         }
+
+        queryLaunchableActivities()
+            .mapNotNull { resolveInfo ->
+                val activityInfo = resolveInfo.activityInfo ?: return@mapNotNull null
+                val packageName = activityInfo.packageName
+                if (packageName in launcherPackages) return@mapNotNull null
+
+                val applicationInfo = activityInfo.applicationInfo
+                    ?: context.packageManager.getApplicationInfo(packageName, 0)
+                val localApp = allApps.find { it.packageName == packageName }
+                val appName = resolveInfo.loadLabel(context.packageManager).toString()
+
+                appWithComponent(
+                    localApp = localApp,
+                    packageName = packageName,
+                    appName = appName,
+                    componentName = ComponentName(packageName, activityInfo.name),
+                    applicationInfo = applicationInfo
+                )
+            }.forEach(::add)
     }
 
     override suspend fun loadApp(packageName: String): AppWithComponent? {
         val localApp = appDrawerRepo.getAppBy(packageName = packageName)
-        val launcherActivityInfo = launcherApps.getActivityList(packageName, Process.myUserHandle()).firstOrNull() ?: return null
-        val appName = launcherActivityInfo.label.toString()
+        val launcherActivityInfo = launcherApps.getActivityList(packageName, Process.myUserHandle()).firstOrNull()
 
-        if (localApp != null) {
-            val displayName = if (localApp.name == localApp.displayName) {
-                // custom display name was not set
-                // update to new app name
-                appName
-            } else {
-                // custom display name is set
-                // use the existing one
-                localApp.displayName
-            }
-
-            return AppWithComponent(
-                app = localApp.copy(
-                    name = appName,
-                    displayName = displayName
-                ),
-                componentName = launcherActivityInfo.componentName
+        if (launcherActivityInfo != null) {
+            return appWithComponent(
+                localApp = localApp,
+                packageName = packageName,
+                appName = launcherActivityInfo.label.toString(),
+                componentName = launcherActivityInfo.componentName,
+                applicationInfo = launcherActivityInfo.applicationInfo
             )
         }
 
-        return AppWithComponent(
-            app = App(
-                name = appName,
-                packageName = packageName,
-                isSystem = launcherActivityInfo.applicationInfo.isSystemApp()
-            ),
-            componentName = launcherActivityInfo.componentName
-        )
+        val resolveInfo = queryLaunchableActivities(packageName).firstOrNull()
+        return resolveInfo?.toAppWithComponent(localApp = localApp, packageName = packageName)
     }
 
     override suspend fun defaultFavoriteApps(): List<AppWithComponent> = listOfNotNull(defaultDialerApp(), defaultMessagingApp())
@@ -99,5 +100,52 @@ internal class LauncherAppsManagerImpl @Inject constructor(
     private suspend fun defaultMessagingApp(): AppWithComponent? {
         val packageName: String? = Telephony.Sms.getDefaultSmsPackage(context)
         return packageName?.let { loadApp(packageName = it) }
+    }
+
+    private fun appWithComponent(
+        localApp: App?,
+        packageName: String,
+        appName: String,
+        componentName: ComponentName,
+        applicationInfo: ApplicationInfo
+    ): AppWithComponent {
+        if (localApp != null) {
+            val displayName = if (localApp.name == localApp.displayName) appName else localApp.displayName
+            return AppWithComponent(
+                app = localApp.copy(
+                    name = appName,
+                    displayName = displayName
+                ),
+                componentName = componentName
+            )
+        }
+
+        return AppWithComponent(
+            app = App(
+                name = appName,
+                packageName = packageName,
+                isSystem = applicationInfo.isSystemApp()
+            ),
+            componentName = componentName
+        )
+    }
+
+    private fun queryLaunchableActivities(packageName: String? = null): List<ResolveInfo> {
+        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        packageName?.let { launcherIntent.setPackage(it) }
+        return context.packageManager.queryIntentActivities(launcherIntent, PackageManager.MATCH_ALL)
+    }
+
+    private fun ResolveInfo.toAppWithComponent(localApp: App?, packageName: String): AppWithComponent? {
+        val activityInfo = activityInfo ?: return null
+        val appName = loadLabel(context.packageManager).toString()
+        val applicationInfo = activityInfo.applicationInfo ?: return null
+        return appWithComponent(
+            localApp = localApp,
+            packageName = packageName,
+            appName = appName,
+            componentName = ComponentName(packageName, activityInfo.name),
+            applicationInfo = applicationInfo
+        )
     }
 }

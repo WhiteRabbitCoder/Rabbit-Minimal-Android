@@ -20,6 +20,7 @@ internal fun AppsList(
     listState: LazyListState = rememberLazyListState(),
     usageMap: Map<String, Long>,
     showAppGroupHeader: Boolean,
+    onAppPointerDown: () -> Unit,
     onAppClick: (AppDrawerItem) -> Unit,
     onAppLongClick: (AppDrawerItem) -> Unit,
     modifier: Modifier = Modifier
@@ -37,6 +38,7 @@ internal fun AppsList(
                     character = character,
                     usageMap = usageMap,
                     showAppGroupHeader = showAppGroupHeader && groupedApps.size != 1,
+                    onAppPointerDown = onAppPointerDown,
                     onAppClick = onAppClick,
                     onAppLongClick = onAppLongClick,
                     modifier = Modifier

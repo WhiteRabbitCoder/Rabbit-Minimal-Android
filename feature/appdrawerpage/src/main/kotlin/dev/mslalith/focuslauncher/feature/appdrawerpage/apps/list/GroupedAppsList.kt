@@ -15,6 +15,7 @@ internal fun GroupedAppsList(
     character: Char,
     usageMap: Map<String, Long>,
     showAppGroupHeader: Boolean,
+    onAppPointerDown: () -> Unit,
     onAppClick: (AppDrawerItem) -> Unit,
     onAppLongClick: (AppDrawerItem) -> Unit
 ) {
@@ -26,6 +27,7 @@ internal fun GroupedAppsList(
             AppDrawerListItem(
                 appDrawerItem = app,
                 usageMinutes = usageMap[app.app.packageName] ?: 0L,
+                onPointerDown = onAppPointerDown,
                 onClick = onAppClick,
                 onLongClick = onAppLongClick
             )

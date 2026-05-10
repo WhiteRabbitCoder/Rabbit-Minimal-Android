@@ -2,6 +2,7 @@ package dev.mslalith.focuslauncher.feature.homepage
 
 import android.app.AppOpsManager
 import android.app.usage.UsageStatsManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -123,17 +125,21 @@ internal fun HomeContextRow(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val (batteryLevel, isCharging) = remember(context) {
+    var batteryStatus by remember(context) { mutableStateOf(context.readBatteryStatus()) }
+
+    DisposableEffect(context) {
         val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        val intent = context.registerReceiver(null, filter)
-        val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
-        val scale = intent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
-        val status = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
-        val pct = if (level >= 0 && scale > 0) (level * 100 / scale.toFloat()).roundToInt() else 0
-        val charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
-        pct to charging
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(receiverContext: Context?, intent: Intent?) {
+                batteryStatus = context.readBatteryStatus(intent)
+            }
+        }
+        val stickyIntent = context.registerReceiver(receiver, filter)
+        batteryStatus = context.readBatteryStatus(stickyIntent)
+        onDispose { context.unregisterReceiver(receiver) }
     }
 
+    val (batteryLevel, isCharging) = batteryStatus
     val batteryText = if (isCharging) "+$batteryLevel%" else "$batteryLevel%"
 
     Text(
@@ -142,6 +148,16 @@ internal fun HomeContextRow(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier
     )
+}
+
+private fun Context.readBatteryStatus(intent: Intent? = null): Pair<Int, Boolean> {
+    val batteryIntent = intent ?: registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+    val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+    val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+    val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+    val batteryLevel = if (level >= 0 && scale > 0) (level * 100 / scale.toFloat()).roundToInt() else 0
+    val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+    return batteryLevel to isCharging
 }
 
 @Composable
@@ -164,7 +180,7 @@ internal fun HomeBottomBar(
                 .clickableNoRipple(onClick = onNavigateToSettings)
         )
         Text(
-            text = "pix",
+            text = "Pix",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.clickableNoRipple(onClick = onNavigateToAiScreen)

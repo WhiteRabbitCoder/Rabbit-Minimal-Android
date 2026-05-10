@@ -60,7 +60,6 @@ import dev.mslalith.focuslauncher.core.ui.providers.LocalLauncherPagerState
 import dev.mslalith.focuslauncher.feature.appdrawerpage.apps.list.AlphabetIndex
 import dev.mslalith.focuslauncher.feature.appdrawerpage.apps.list.AppsList
 import java.util.Calendar
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -111,19 +110,31 @@ private fun AppDrawerPageKeyboardAware(
     val pagerState = LocalLauncherPagerState.current
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
+    var shouldRequestKeyboardFocus by remember { mutableStateOf(true) }
 
     LaunchedEffect(key1 = pagerState) {
-        snapshotFlow { pagerState.currentPage }.collectLatest { page ->
-            if (page == 2) {
-                delay(150)
-                focusRequester.requestFocus()
-                keyboardController?.show()
-            } else {
+        snapshotFlow { pagerState.currentPage to pagerState.targetPage }.collectLatest { (currentPage, targetPage) ->
+            if (targetPage == APP_DRAWER_PAGE) {
+                shouldRequestKeyboardFocus = true
+            }
+            if (currentPage != APP_DRAWER_PAGE && targetPage != APP_DRAWER_PAGE) {
                 onSearchQueryChange("")
                 keyboardController?.hide()
                 focusManager.clearFocus()
             }
         }
+    }
+
+    LaunchedEffect(key1 = pagerState, key2 = shouldRequestKeyboardFocus) {
+        snapshotFlow { pagerState.currentPage to pagerState.targetPage }
+            .collectLatest { (_, targetPage) ->
+                if (!shouldRequestKeyboardFocus) return@collectLatest
+                if (targetPage != APP_DRAWER_PAGE) return@collectLatest
+
+                focusRequester.requestFocus()
+                keyboardController?.show()
+                shouldRequestKeyboardFocus = false
+            }
     }
 
     // Auto-launch when filtered results narrow to exactly one app
@@ -150,11 +161,17 @@ private fun AppDrawerPageKeyboardAware(
         showAppMoreOptions(appDrawerItem)
     }
 
+    fun onAppPointerDown() {
+        shouldRequestKeyboardFocus = false
+        focusManager.clearFocus(force = true)
+    }
+
     AppDrawerPageInternal(
         modifier = modifier,
         appDrawerPageState = state,
         focusRequester = focusRequester,
         onSearchQueryChange = onSearchQueryChange,
+        onAppPointerDown = ::onAppPointerDown,
         onAppClick = ::onAppClick,
         onAppLongClick = ::onAppLongClick,
         reloadIconPack = reloadIconPack
@@ -167,6 +184,7 @@ internal fun AppDrawerPageInternal(
     appDrawerPageState: AppDrawerPageState,
     focusRequester: FocusRequester,
     onSearchQueryChange: (String) -> Unit,
+    onAppPointerDown: () -> Unit,
     onAppClick: (AppDrawerItem) -> Unit,
     onAppLongClick: (AppDrawerItem) -> Unit,
     reloadIconPack: () -> Unit,
@@ -216,6 +234,7 @@ internal fun AppDrawerPageInternal(
                         listState = listState,
                         usageMap = usageMap,
                         showAppGroupHeader = false,
+                        onAppPointerDown = onAppPointerDown,
                         onAppClick = onAppClick,
                         onAppLongClick = onAppLongClick,
                         modifier = Modifier
@@ -306,3 +325,5 @@ private fun getUsageMap(context: Context): Map<String, Long> = runCatching {
         .filter { it.totalTimeInForeground > 0 }
         .associate { it.packageName to (it.totalTimeInForeground / 60_000L) }
 }.getOrDefault(emptyMap())
+
+private const val APP_DRAWER_PAGE = 2

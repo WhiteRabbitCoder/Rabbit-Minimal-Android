@@ -15,10 +15,11 @@ class GetAppDrawerAppsUseCase @Inject constructor(
         .combine(flow = hiddenAppsRepo.onlyHiddenAppsFlow) { allApps, hiddenApps ->
             allApps - hiddenApps.toSet()
         }.combine(flow = searchQueryFlow) { filteredApps, query ->
+            val normalizedQuery = query.trim()
             when {
-                query.isNotEmpty() -> filteredApps.filter {
-                    it.displayName.startsWith(
-                        prefix = query,
+                normalizedQuery.isNotEmpty() -> filteredApps.filter {
+                    it.displayName.contains(
+                        other = normalizedQuery,
                         ignoreCase = true
                     )
                 }

@@ -21,6 +21,7 @@ import com.slack.circuit.foundation.internal.BackHandler
 import dagger.hilt.components.SingletonComponent
 import dev.mslalith.focuslauncher.core.screens.LauncherScreen
 import dev.mslalith.focuslauncher.core.ui.controller.toggleStatusBars
+import dev.mslalith.focuslauncher.core.ui.extensions.onHorizontalSwipe
 import dev.mslalith.focuslauncher.core.ui.providers.LocalLauncherPagerState
 import dev.mslalith.focuslauncher.core.ui.providers.LocalSystemUiController
 import dev.mslalith.focuslauncher.core.ui.providers.ProvideLauncherPagerState
@@ -76,6 +77,7 @@ private fun LauncherInternal(
     ) { paddingValues ->
         HorizontalPager(
             state = pagerState,
+            userScrollEnabled = false,
             beyondBoundsPageCount = 2,
             modifier = Modifier
                 .padding(paddingValues = paddingValues)
@@ -86,19 +88,43 @@ private fun LauncherInternal(
                 1 -> HomePage(
                     state = state.homePageState,
                     onNavigateToAiScreen = { state.eventSink(LauncherUiEvent.NavigateToAiScreen) },
-                    onNavigateToSettings = { state.eventSink(LauncherUiEvent.NavigateToSettings) }
+                    onNavigateToSettings = { state.eventSink(LauncherUiEvent.NavigateToSettings) },
+                    onNavigateToAppDrawer = {
+                        coroutineScope.launch { pagerState.animateScrollToPage(page = 2) }
+                    },
+                    modifier = Modifier
+                        .onHorizontalSwipe(
+                            onSwipeLeft = { state.eventSink(LauncherUiEvent.NavigateToAiScreen) },
+                            onSwipeRight = { coroutineScope.launch { pagerState.animateScrollToPage(page = 0) } }
+                        )
                 )
-                2 -> AppDrawerPage(state = state.appDrawerPageState)
+                2 -> AppDrawerPage(
+                    state = state.appDrawerPageState,
+                    modifier = Modifier.onHorizontalSwipe(
+                        onSwipeRight = {
+                            coroutineScope.launch { pagerState.animateScrollToPage(page = 1) }
+                        }
+                    )
+                )
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DiscoveryPage(modifier: Modifier = Modifier) {
+    val pagerState = LocalLauncherPagerState.current
+    val coroutineScope = rememberCoroutineScope()
+
     Box(
         modifier = modifier
-            .fillMaxSize(),
+            .fillMaxSize()
+            .onHorizontalSwipe(
+                onSwipeLeft = {
+                    coroutineScope.launch { pagerState.animateScrollToPage(page = 1) }
+                }
+            ),
         contentAlignment = Alignment.Center
     ) {
         Text(

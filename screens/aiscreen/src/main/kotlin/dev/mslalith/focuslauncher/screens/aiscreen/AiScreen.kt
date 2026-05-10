@@ -38,10 +38,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import com.slack.circuit.codegen.annotations.CircuitInject
 import dagger.hilt.components.SingletonComponent
 import dev.mslalith.focuslauncher.core.resources.R
 import dev.mslalith.focuslauncher.core.screens.AiScreen
+import dev.mslalith.focuslauncher.core.ui.effects.OnLifecycleEventChange
+import dev.mslalith.focuslauncher.core.ui.extensions.onHorizontalSwipe
 
 @CircuitInject(AiScreen::class, SingletonComponent::class)
 @Composable
@@ -49,6 +52,12 @@ fun AiScreen(
     state: AiScreenState,
     modifier: Modifier = Modifier
 ) {
+    OnLifecycleEventChange { event ->
+        if (event == Lifecycle.Event.ON_PAUSE) {
+            state.eventSink(AiScreenUiEvent.NavigateBack)
+        }
+    }
+
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -59,6 +68,7 @@ fun AiScreen(
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .imePadding()
+                .onHorizontalSwipe(onSwipeRight = { state.eventSink(AiScreenUiEvent.NavigateBack) })
         ) {
             AiTopBar(onBack = { state.eventSink(AiScreenUiEvent.NavigateBack) })
 

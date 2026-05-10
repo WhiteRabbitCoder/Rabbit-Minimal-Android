@@ -19,6 +19,7 @@ import dev.mslalith.focuslauncher.core.model.appdrawer.AppDrawerItem
 internal fun AppDrawerListItem(
     appDrawerItem: AppDrawerItem,
     usageMinutes: Long,
+    onPointerDown: () -> Unit,
     onClick: (AppDrawerItem) -> Unit,
     onLongClick: (AppDrawerItem) -> Unit
 ) {
@@ -31,8 +32,9 @@ internal fun AppDrawerListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .pointerInput(appDrawerItem) {
+            .pointerInput(appDrawerItem.app.packageName) {
                 detectTapGestures(
+                    onPress = { onPointerDown() },
                     onTap = { onClick(appDrawerItem) },
                     onLongPress = { onLongClick(appDrawerItem) }
                 )

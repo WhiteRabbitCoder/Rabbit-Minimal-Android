@@ -1,9 +1,8 @@
 package dev.mslalith.focuslauncher.feature.appdrawerpage.apps.grid
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -29,7 +29,6 @@ import dev.mslalith.focuslauncher.core.ui.VerticalSpacer
 import dev.mslalith.focuslauncher.core.ui.remember.rememberAppColor
 import dev.mslalith.focuslauncher.feature.appdrawerpage.utils.Constants.APP_ICON_SIZE
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun AppDrawerGridItem(
     modifier: Modifier,
@@ -74,10 +73,12 @@ internal fun AppDrawerGridItem(
             .fillMaxWidth()
             .padding(horizontal = 0.dp, vertical = 4.dp)
             .clip(shape = MaterialTheme.shapes.small)
-            .combinedClickable(
-                onClick = { onClick(appDrawerItem) },
-                onLongClick = { onLongClick(appDrawerItem) }
-            )
+            .pointerInput(appDrawerItem.app.packageName) {
+                detectTapGestures(
+                    onTap = { onClick(appDrawerItem) },
+                    onLongPress = { onLongClick(appDrawerItem) }
+                )
+            }
             .padding(horizontal = 4.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
