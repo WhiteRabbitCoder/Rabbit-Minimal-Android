@@ -147,3 +147,35 @@ Hilt is used throughout. Each module has a `di/` package with `@Module` objects.
 - Mock responses with 1.5s thinking delay; `PixState` enum drives mascot animation state
 - `PixMascot.kt`: Canvas-drawn rabbit; idle bounce via `InfiniteTransition`; THINKING = pulsing opacity; RESPONDING = ear rotation
 - Pushed via `Navigator` from Home's AI button; not a pager page
+
+## Recent development updates (dev)
+
+- Tap / click fixes: Replaced `combinedClickable` with `detectTapGestures` in AppDrawerListItem to consume the DOWN event immediately, preventing the first tap from being intercepted by OEM edge gestures. Added autofocus-cancelable behavior so the search keyboard still appears automatically without breaking first-tap launches.
+
+- Search behavior: App-drawer search now performs case-insensitive "contains" matching on displayName (mid-word matches like "Royale" match "Clash Royale") and trims queries. Tests added (GetAppDrawerAppsUseCaseTest).
+
+- App discovery robustness: `LauncherApps` fallback added — when system `LauncherApps` misses entries on some OEM ROMs (OneUI etc.), the code now queries PackageManager (`ACTION_MAIN` + `CATEGORY_LAUNCHER`) and reconciles missing apps. `LoadAllAppsUseCase` now adds only missing apps when the DB already exists instead of forcing a full reload.
+
+- Weather: Continued use of Open-Meteo `temperature_2m`. Note that different weather providers/models can report slightly different temperatures.
+
+- Battery updates: `HomeContextRow` now registers a `BroadcastReceiver` for `ACTION_BATTERY_CHANGED` (in a `DisposableEffect`) and updates battery level / charging state in real time instead of reading once via `remember`.
+
+- Pix / AI Screen behavior: `AiScreen` triggers `NavigateBack` on `ON_PAUSE` so returning via Home behaves correctly. A horizontal swipe (right) on the AI screen also navigates back.
+
+- Gestures rework: Gesture language was normalized. From Home:
+  - Swipe up (finger moves up) → open App Drawer
+  - Swipe left (finger moves left) → open Pix (AI)
+  - Swipe right (finger moves right) → open Discovery
+  Pager horizontal scrolling is disabled (`userScrollEnabled = false`) and gestures are handled explicitly to avoid accidental navigation.
+
+- Tests & lint: Adjusted unit tests and detekt configuration where necessary for touched modules. Changes were verified locally and a dev-debug APK was installed on a connected Samsung device for manual verification.
+
+Validation steps:
+
+- Run unit tests for domain and app-drawer: `./gradlew :core:domain:testDebugUnitTest`
+- Run detekt for affected modules: `./gradlew :feature:homepage:detekt :core:launcherapps:detekt`
+- Build & install dev-debug APK: `./gradlew assembleDevDebug && adb -s <device-id> install -r app/build/outputs/apk/dev/debug/Focus-Launcher-v0.9.0-dev-debug.apk`
+
+Notes:
+
+- These changes focus on improving UX on Samsung/OneUI devices and fixing first-tap/double-tap issues. Continue testing on real devices; OEM behaviors around LauncherApps and edge gestures can vary.
