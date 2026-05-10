@@ -9,10 +9,19 @@ import dev.mslalith.focuslauncher.feature.quoteforyou.widget.QuoteForYouUiCompon
 
 data class HomePageState(
     val isPullDownNotificationShadeEnabled: Boolean,
+    val date: String,
+    val dayProgress: Float,
+    val yearProgress: Float,
+    val weatherText: String,
     val clockWidgetUiComponentState: ClockWidgetUiComponentState,
     val lunarCalendarUiComponentState: LunarCalendarUiComponentState,
     val quoteForYouUiComponentState: QuoteForYouUiComponentState,
-    val favoritesListUiComponentState: FavoritesListUiComponentState
+    val favoritesListUiComponentState: FavoritesListUiComponentState,
+    val eventSink: (HomePageUiEvent) -> Unit = {}
 ) : CircuitUiState
 
-sealed interface HomePageUiEvent : CircuitUiEvent
+sealed interface HomePageUiEvent : CircuitUiEvent {
+    data object NavigateToAiScreen : HomePageUiEvent
+    data object NavigateToSettings : HomePageUiEvent
+    data class LocationGranted(val latitude: Double, val longitude: Double) : HomePageUiEvent
+}

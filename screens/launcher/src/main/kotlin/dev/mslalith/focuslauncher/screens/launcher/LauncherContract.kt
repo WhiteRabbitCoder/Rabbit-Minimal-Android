@@ -4,12 +4,15 @@ import com.slack.circuit.runtime.CircuitUiEvent
 import com.slack.circuit.runtime.CircuitUiState
 import dev.mslalith.focuslauncher.feature.appdrawerpage.AppDrawerPageState
 import dev.mslalith.focuslauncher.feature.homepage.HomePageState
-import dev.mslalith.focuslauncher.feature.settingspage.SettingsPageState
 
 data class LauncherState(
-    val settingsPageState: SettingsPageState,
     val homePageState: HomePageState,
-    val appDrawerPageState: AppDrawerPageState
+    val appDrawerPageState: AppDrawerPageState,
+    val showStatusBar: Boolean,
+    val eventSink: (LauncherUiEvent) -> Unit = {}
 ) : CircuitUiState
 
-sealed interface LauncherUiEvent : CircuitUiEvent
+sealed interface LauncherUiEvent : CircuitUiEvent {
+    data object NavigateToAiScreen : LauncherUiEvent
+    data object NavigateToSettings : LauncherUiEvent
+}

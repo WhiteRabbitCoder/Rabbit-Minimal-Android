@@ -1,43 +1,66 @@
 package dev.mslalith.focuslauncher.feature.appdrawerpage
 
-import androidx.compose.animation.AnimatedVisibility
+import android.app.AppOpsManager
+import android.app.usage.UsageStatsManager
+import android.content.Context
+import android.os.Process
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import com.slack.circuit.codegen.annotations.CircuitInject
 import com.slack.circuit.overlay.LocalOverlayHost
 import dagger.hilt.components.SingletonComponent
 import dev.mslalith.focuslauncher.core.circuitoverlay.bottomsheet.showBottomSheet
 import dev.mslalith.focuslauncher.core.circuitoverlay.bottomsheet.showBottomSheetWithResult
+import dev.mslalith.focuslauncher.core.common.extensions.groupByImmutable
+import dev.mslalith.focuslauncher.core.common.extensions.isAlphabet
 import dev.mslalith.focuslauncher.core.common.extensions.launchApp
 import dev.mslalith.focuslauncher.core.common.model.LoadingState
-import dev.mslalith.focuslauncher.core.model.AppDrawerViewType
 import dev.mslalith.focuslauncher.core.model.appdrawer.AppDrawerItem
 import dev.mslalith.focuslauncher.core.screens.AppDrawerPageScreen
 import dev.mslalith.focuslauncher.core.screens.AppMoreOptionsBottomSheetScreen
 import dev.mslalith.focuslauncher.core.screens.BottomSheetScreen
 import dev.mslalith.focuslauncher.core.screens.UpdateAppDisplayNameBottomSheetScreen
 import dev.mslalith.focuslauncher.core.ui.DotWaveLoader
-import dev.mslalith.focuslauncher.core.ui.SearchField
 import dev.mslalith.focuslauncher.core.ui.effects.OnDayChangeListener
-import dev.mslalith.focuslauncher.core.ui.modifiers.verticalFadeOutEdge
+import dev.mslalith.focuslauncher.core.ui.effects.OnLifecycleEventChange
 import dev.mslalith.focuslauncher.core.ui.providers.LocalLauncherPagerState
-import dev.mslalith.focuslauncher.feature.appdrawerpage.apps.grid.AppsGrid
+import dev.mslalith.focuslauncher.feature.appdrawerpage.apps.list.AlphabetIndex
 import dev.mslalith.focuslauncher.feature.appdrawerpage.apps.list.AppsList
+import java.util.Calendar
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -47,10 +70,7 @@ fun AppDrawerPage(
     state: AppDrawerPageState,
     modifier: Modifier = Modifier
 ) {
-    // Need to extract the eventSink out to a local val, so that the Compose Compiler
-    // treats it as stable. See: https://issuetracker.google.com/issues/256100927
     val eventSink = state.eventSink
-
     val scope = rememberCoroutineScope()
     val overlayHost = LocalOverlayHost.current
 
@@ -61,7 +81,8 @@ fun AppDrawerPage(
     fun showAppMoreOptionsBottomSheetScreen(appDrawerItem: AppDrawerItem) {
         scope.launch {
             when (overlayHost.showBottomSheetWithResult(AppMoreOptionsBottomSheetScreen(appDrawerItem = appDrawerItem))) {
-                is AppMoreOptionsBottomSheetScreen.Result.ShowUpdateAppDisplayBottomSheet -> showBottomSheet(screen = UpdateAppDisplayNameBottomSheetScreen(app = appDrawerItem.app))
+                is AppMoreOptionsBottomSheetScreen.Result.ShowUpdateAppDisplayBottomSheet ->
+                    showBottomSheet(screen = UpdateAppDisplayNameBottomSheetScreen(app = appDrawerItem.app))
                 null -> Unit
             }
         }
@@ -89,13 +110,32 @@ private fun AppDrawerPageKeyboardAware(
     val keyboardController = LocalSoftwareKeyboardController.current
     val pagerState = LocalLauncherPagerState.current
     val focusManager = LocalFocusManager.current
+    val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(key1 = pagerState) {
         snapshotFlow { pagerState.currentPage }.collectLatest { page ->
-            if (page != 2) {
+            if (page == 2) {
+                delay(150)
+                focusRequester.requestFocus()
+                keyboardController?.show()
+            } else {
                 onSearchQueryChange("")
                 keyboardController?.hide()
+                focusManager.clearFocus()
             }
+        }
+    }
+
+    // Auto-launch when filtered results narrow to exactly one app
+    val allAppsState = state.allAppsState
+    LaunchedEffect(allAppsState, state.searchBarQuery) {
+        if (state.searchBarQuery.isEmpty()) return@LaunchedEffect
+        val loaded = allAppsState as? LoadingState.Loaded ?: return@LaunchedEffect
+        if (loaded.value.size == 1) {
+            focusManager.clearFocus()
+            keyboardController?.hide()
+            context.launchApp(app = loaded.value.first().app)
+            onSearchQueryChange("")
         }
     }
 
@@ -113,6 +153,7 @@ private fun AppDrawerPageKeyboardAware(
     AppDrawerPageInternal(
         modifier = modifier,
         appDrawerPageState = state,
+        focusRequester = focusRequester,
         onSearchQueryChange = onSearchQueryChange,
         onAppClick = ::onAppClick,
         onAppLongClick = ::onAppLongClick,
@@ -120,17 +161,26 @@ private fun AppDrawerPageKeyboardAware(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun AppDrawerPageInternal(
     appDrawerPageState: AppDrawerPageState,
+    focusRequester: FocusRequester,
     onSearchQueryChange: (String) -> Unit,
     onAppClick: (AppDrawerItem) -> Unit,
     onAppLongClick: (AppDrawerItem) -> Unit,
     reloadIconPack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OnDayChangeListener {
-        reloadIconPack()
+    val context = LocalContext.current
+    var usageMap by remember { mutableStateOf(getUsageMap(context)) }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+
+    OnDayChangeListener { reloadIconPack() }
+
+    OnLifecycleEventChange { event ->
+        if (event == Lifecycle.Event.ON_RESUME) usageMap = getUsageMap(context)
     }
 
     Column(
@@ -138,52 +188,121 @@ internal fun AppDrawerPageInternal(
             .fillMaxSize()
             .imePadding()
     ) {
-        Box(
-            modifier = Modifier
-                .weight(weight = 1f)
-                .verticalFadeOutEdge(
-                    height = 16.dp,
-                    color = MaterialTheme.colorScheme.surface
-                )
-        ) {
-            when (val allAppsState = appDrawerPageState.allAppsState) {
-                is LoadingState.Loaded -> {
-                    when (appDrawerPageState.appDrawerViewType) {
-                        AppDrawerViewType.LIST -> AppsList(
-                            apps = allAppsState.value,
-                            appDrawerIconViewType = appDrawerPageState.appDrawerIconViewType,
-                            showAppGroupHeader = appDrawerPageState.showAppGroupHeader,
-                            isSearchQueryEmpty = appDrawerPageState.searchBarQuery.isEmpty(),
-                            onAppClick = onAppClick,
-                            onAppLongClick = onAppLongClick
-                        )
+        DrawerSearchField(
+            query = appDrawerPageState.searchBarQuery,
+            onQueryChange = onSearchQueryChange,
+            focusRequester = focusRequester,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 40.dp)
+        )
 
-                        AppDrawerViewType.GRID -> AppsGrid(
-                            apps = allAppsState.value,
-                            appDrawerIconViewType = appDrawerPageState.appDrawerIconViewType,
-                            onAppClick = onAppClick,
-                            onAppLongClick = onAppLongClick
-                        )
+        when (val allAppsState = appDrawerPageState.allAppsState) {
+            is LoadingState.Loaded -> {
+                val groupedApps by remember(key1 = allAppsState.value) {
+                    derivedStateOf {
+                        allAppsState.value.groupByImmutable { app ->
+                            app.app.displayName.first()
+                                .let { if (it.isAlphabet()) it.uppercaseChar() else '#' }
+                        }
                     }
                 }
+                val characters = remember(groupedApps) { groupedApps.keys.toList() }
+                val charToIndex = remember(characters) {
+                    characters.mapIndexed { i, c -> c to i }.toMap()
+                }
 
-                LoadingState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        DotWaveLoader()
-                    }
+                Box(modifier = Modifier.fillMaxSize()) {
+                    AppsList(
+                        groupedApps = groupedApps,
+                        listState = listState,
+                        usageMap = usageMap,
+                        showAppGroupHeader = false,
+                        onAppClick = onAppClick,
+                        onAppLongClick = onAppLongClick,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(start = 24.dp, end = 52.dp)
+                    )
+                    AlphabetIndex(
+                        characters = characters,
+                        onCharacterTap = { char ->
+                            val index = charToIndex[char] ?: return@AlphabetIndex
+                            scope.launch { listState.scrollToItem(index) }
+                        }
+                    )
+                }
+            }
+
+            LoadingState.Loading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    DotWaveLoader()
                 }
             }
         }
-
-        AnimatedVisibility(visible = appDrawerPageState.showSearchBar) {
-            SearchField(
-                placeholder = stringResource(id = R.string.search_app_hint),
-                query = appDrawerPageState.searchBarQuery,
-                onQueryChange = onSearchQueryChange
-            )
-        }
     }
 }
+
+@Composable
+private fun DrawerSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    focusRequester: FocusRequester,
+    modifier: Modifier = Modifier
+) {
+    BasicTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = modifier
+            .fillMaxWidth()
+            .focusRequester(focusRequester),
+        textStyle = MaterialTheme.typography.headlineSmall.copy(
+            color = MaterialTheme.colorScheme.onBackground
+        ),
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(
+            autoCorrect = false,
+            imeAction = ImeAction.Search
+        ),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        decorationBox = { innerTextField ->
+            Column {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    if (query.isEmpty()) {
+                        Text(
+                            text = "Buscar aplicaciones",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    innerTextField()
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                )
+            }
+        }
+    )
+}
+
+private fun getUsageMap(context: Context): Map<String, Long> = runCatching {
+    val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+    val mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), context.packageName)
+    if (mode != AppOpsManager.MODE_ALLOWED) return@runCatching emptyMap()
+    val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+    val cal = Calendar.getInstance()
+    val endTime = cal.timeInMillis
+    cal.set(Calendar.HOUR_OF_DAY, 0)
+    cal.set(Calendar.MINUTE, 0)
+    cal.set(Calendar.SECOND, 0)
+    cal.set(Calendar.MILLISECOND, 0)
+    val startTime = cal.timeInMillis
+    usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startTime, endTime)
+        .filter { it.totalTimeInForeground > 0 }
+        .associate { it.packageName to (it.totalTimeInForeground / 60_000L) }
+}.getOrDefault(emptyMap())

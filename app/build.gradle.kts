@@ -110,6 +110,7 @@ dependencies {
     implementation(projects.screens.iconpack)
     implementation(projects.screens.about)
     implementation(projects.screens.developer)
+    implementation(projects.screens.aiscreen)
 
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.splashscreen)

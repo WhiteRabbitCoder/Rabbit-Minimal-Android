@@ -32,3 +32,6 @@ data object AboutScreen : Screen
 
 @Parcelize
 data object DeveloperScreen : Screen
+
+@Parcelize
+data object AiScreen : Screen

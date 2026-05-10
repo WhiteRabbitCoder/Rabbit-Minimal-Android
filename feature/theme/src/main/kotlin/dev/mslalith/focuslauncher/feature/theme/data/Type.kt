@@ -11,17 +11,18 @@ import androidx.compose.ui.unit.sp
 import dev.mslalith.focuslauncher.core.lint.kover.IgnoreInKoverReport
 import dev.mslalith.focuslauncher.feature.theme.R
 
-private val defaultFontRegular = Font(resId = R.font.nunitosans_regular)
+private val defaultFontRegular = Font(resId = R.font.nunitosans_regular, weight = FontWeight.Normal)
+private val defaultFontBold = Font(resId = R.font.nunitosans_regular, weight = FontWeight.Bold)
 
-private val defaultFontFamily = FontFamily(defaultFontRegular)
+private val defaultFontFamily = FontFamily(defaultFontRegular, defaultFontBold)
 
 internal val Typography = Typography(
     displayLarge = TextStyle(
         fontFamily = defaultFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 57.sp,
-        lineHeight = 64.sp,
-        letterSpacing = (-0.25).sp
+        fontWeight = FontWeight.Bold,
+        fontSize = 64.sp,
+        lineHeight = 72.sp,
+        letterSpacing = (-1).sp
     ),
     displayMedium = TextStyle(
         fontFamily = defaultFontFamily,

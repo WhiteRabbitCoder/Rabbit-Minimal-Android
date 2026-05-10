@@ -12,4 +12,7 @@ dependencies {
     implementation(projects.feature.lunarcalendar)
     implementation(projects.feature.quoteforyou)
     implementation(projects.feature.favorites)
+
+    implementation(libs.kotlinx.datetime)
+    implementation(libs.kotlinx.collections.immutable)
 }

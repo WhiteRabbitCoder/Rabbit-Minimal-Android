@@ -51,6 +51,7 @@ include(
     ":screens:iconpack",
     ":screens:about",
     ":screens:developer",
+    ":screens:aiscreen",
     ":feature:homepage",
     ":feature:settingspage",
     ":feature:appdrawerpage",

@@ -5,10 +5,9 @@ plugins {
 }
 
 android {
-    namespace = "dev.mslalith.focuslauncher.screens.launcher"
+    namespace = "dev.mslalith.focuslauncher.screens.aiscreen"
 }
 
 dependencies {
-    implementation(projects.feature.homepage)
-    implementation(projects.feature.appdrawerpage)
+    implementation(libs.kotlinx.collections.immutable)
 }

@@ -6,8 +6,10 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dev.mslalith.focuslauncher.core.data.network.api.PlacesApi
 import dev.mslalith.focuslauncher.core.data.network.api.QuotesApi
+import dev.mslalith.focuslauncher.core.data.network.api.WeatherApi
 import dev.mslalith.focuslauncher.core.data.network.api.impl.PlacesApiImpl
 import dev.mslalith.focuslauncher.core.data.network.api.impl.QuotesApiImpl
+import dev.mslalith.focuslauncher.core.data.network.api.impl.WeatherApiImpl
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.HttpTimeout
@@ -48,4 +50,8 @@ internal object NetworkModule {
     @Provides
     @Singleton
     fun providePlacesApi(httpClient: HttpClient): PlacesApi = PlacesApiImpl(httpClient = httpClient)
+
+    @Provides
+    @Singleton
+    fun provideWeatherApi(httpClient: HttpClient): WeatherApi = WeatherApiImpl(httpClient = httpClient)
 }

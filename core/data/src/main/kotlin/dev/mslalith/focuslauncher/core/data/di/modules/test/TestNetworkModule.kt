@@ -7,8 +7,10 @@ import dagger.hilt.testing.TestInstallIn
 import dev.mslalith.focuslauncher.core.data.di.modules.NetworkModule
 import dev.mslalith.focuslauncher.core.data.network.api.PlacesApi
 import dev.mslalith.focuslauncher.core.data.network.api.QuotesApi
+import dev.mslalith.focuslauncher.core.data.network.api.WeatherApi
 import dev.mslalith.focuslauncher.core.data.network.api.fakes.FakePlacesApi
 import dev.mslalith.focuslauncher.core.data.network.api.fakes.FakeQuotesApi
+import dev.mslalith.focuslauncher.core.data.network.api.fakes.FakeWeatherApi
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.HttpTimeout
@@ -52,4 +54,8 @@ internal object TestNetworkModule {
     @Provides
     @Singleton
     fun providePlacesApi(): PlacesApi = FakePlacesApi()
+
+    @Provides
+    @Singleton
+    fun provideWeatherApi(): WeatherApi = FakeWeatherApi()
 }
