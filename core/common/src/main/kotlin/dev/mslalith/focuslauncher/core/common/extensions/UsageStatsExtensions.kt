@@ -15,6 +15,9 @@ fun getStartOfTodayMillis(): Long {
     return calendar.timeInMillis
 }
 
+/**
+ * Returns launchable app package names (ACTION_MAIN + CATEGORY_LAUNCHER) as a set for fast filtering.
+ */
 fun PackageManager.getLaunchablePackages(): Set<String> {
     val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
     val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

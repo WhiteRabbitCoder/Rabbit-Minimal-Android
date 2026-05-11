@@ -204,6 +204,7 @@ private fun HomePageContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 24.dp)
+                // Gesture names represent finger direction: down opens drawer, up opens notifications.
                 .onSwipeDown {
                     onNavigateToAppDrawer()
                 }

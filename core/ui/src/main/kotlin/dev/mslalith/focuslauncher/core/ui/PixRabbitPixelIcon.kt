@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
+import kotlin.math.min
 import kotlin.math.sqrt
 
 private const val PIX_GRID_SIZE = 24
