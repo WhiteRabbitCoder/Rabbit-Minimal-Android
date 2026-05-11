@@ -356,7 +356,7 @@ private fun ScreenTimeAnalyticsBottomSheet(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = "□",
+                                            text = app.displayName.firstOrNull()?.uppercase() ?: "?",
                                             style = MaterialTheme.typography.labelSmall
                                         )
                                     }
