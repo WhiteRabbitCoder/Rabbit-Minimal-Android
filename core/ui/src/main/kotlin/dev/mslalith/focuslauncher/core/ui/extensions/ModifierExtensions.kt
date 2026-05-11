@@ -8,6 +8,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.onSizeChanged
 
 inline fun Modifier.modifyIf(
     predicate: () -> Boolean,
@@ -105,4 +109,45 @@ inline fun Modifier.onHorizontalSwipe(
             }
         }
     )
+}
+
+inline fun Modifier.onEdgeHorizontalSwipe(
+    enabled: Boolean = true,
+    edgeWidth: Dp = 32.dp,
+    crossinline onSwipeFromLeft: () -> Unit = {},
+    crossinline onSwipeFromRight: () -> Unit = {}
+) = composed {
+    val velocityThreshold = 600f
+    val edgeWidthPx = with(LocalDensity.current) { edgeWidth.toPx() }
+    var xStart = 0f
+    var xDrag = 0f
+    var layoutWidth = 0f
+
+    this
+        .onSizeChanged { layoutWidth = it.width.toFloat() }
+        .then(
+            Modifier.draggable(
+                enabled = enabled,
+                orientation = Orientation.Horizontal,
+                onDragStarted = {
+                    xStart = it.x
+                    xDrag = xStart
+                },
+                state = rememberDraggableState { delta ->
+                    xDrag += delta
+                },
+                onDragStopped = { velocity ->
+                    val isLeftEdgeSwipe = xStart <= edgeWidthPx && xDrag > xStart && velocity > velocityThreshold
+                    val isRightEdgeSwipe = layoutWidth > 0f &&
+                        xStart >= (layoutWidth - edgeWidthPx) &&
+                        xDrag < xStart &&
+                        velocity < -velocityThreshold
+
+                    when {
+                        isLeftEdgeSwipe -> onSwipeFromLeft()
+                        isRightEdgeSwipe -> onSwipeFromRight()
+                    }
+                }
+            )
+        )
 }

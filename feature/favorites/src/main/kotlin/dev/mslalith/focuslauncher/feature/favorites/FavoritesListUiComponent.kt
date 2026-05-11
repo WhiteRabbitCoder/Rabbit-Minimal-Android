@@ -3,6 +3,10 @@ package dev.mslalith.focuslauncher.feature.favorites
 import android.app.AppOpsManager
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Process
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -159,6 +163,8 @@ private fun getUsageMap(context: Context): Map<String, Long> = runCatching {
     val mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), context.packageName)
     if (mode != AppOpsManager.MODE_ALLOWED) return@runCatching emptyMap()
     val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+    val packageManager = context.packageManager
+    val launchablePackages = getLaunchablePackages(packageManager)
     val cal = Calendar.getInstance()
     val endTime = cal.timeInMillis
     cal.set(Calendar.HOUR_OF_DAY, 0)
@@ -166,7 +172,31 @@ private fun getUsageMap(context: Context): Map<String, Long> = runCatching {
     cal.set(Calendar.SECOND, 0)
     cal.set(Calendar.MILLISECOND, 0)
     val startTime = cal.timeInMillis
-    usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startTime, endTime)
-        .filter { it.totalTimeInForeground > 0 }
-        .associate { it.packageName to (it.totalTimeInForeground / 60_000L) }
+    usm.queryAndAggregateUsageStats(startTime, endTime)
+        .entries
+        .asSequence()
+        .filter { (packageName, usageStats) ->
+            usageStats.totalTimeInForeground > 0L &&
+                packageName != context.packageName &&
+                packageName in launchablePackages
+        }
+        .mapNotNull { (packageName, usageStats) ->
+            val appInfo = runCatching { packageManager.getApplicationInfo(packageName, 0) }.getOrNull()
+                ?: return@mapNotNull null
+            val isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+            if (isSystemApp) return@mapNotNull null
+            packageName to (usageStats.totalTimeInForeground / 60_000L)
+        }
+        .toMap()
 }.getOrDefault(emptyMap())
+
+private fun getLaunchablePackages(packageManager: PackageManager): Set<String> {
+    val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+    val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        packageManager.queryIntentActivities(launcherIntent, PackageManager.ResolveInfoFlags.of(0))
+    } else {
+        @Suppress("DEPRECATION")
+        packageManager.queryIntentActivities(launcherIntent, 0)
+    }
+    return resolveInfos.mapNotNull { it.activityInfo?.packageName }.toSet()
+}

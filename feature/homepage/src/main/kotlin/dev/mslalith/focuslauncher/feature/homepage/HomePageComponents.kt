@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.BatteryManager
 import android.os.Process
 import android.provider.Settings
@@ -54,6 +56,7 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.Lifecycle
 import dev.mslalith.focuslauncher.core.common.model.getOrNull
 import dev.mslalith.focuslauncher.core.model.lunarphase.LunarPhase
+import dev.mslalith.focuslauncher.core.ui.PixRabbitPixelIcon
 import dev.mslalith.focuslauncher.core.ui.effects.OnLifecycleEventChange
 import dev.mslalith.focuslauncher.core.ui.extensions.clickableNoRipple
 import dev.mslalith.focuslauncher.feature.lunarcalendar.widget.LunarCalendarUiComponentState
@@ -589,26 +592,30 @@ private fun getTop4UsedApps(context: Context): List<TopApp> = runCatching {
     if (mode != AppOpsManager.MODE_ALLOWED) return@runCatching emptyList()
 
     val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-    val cal = java.util.Calendar.getInstance()
-    val endTime = cal.timeInMillis
-    cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
-    cal.set(java.util.Calendar.MINUTE, 0)
-    cal.set(java.util.Calendar.SECOND, 0)
-    cal.set(java.util.Calendar.MILLISECOND, 0)
-    val startTime = cal.timeInMillis
+    val startTime = getStartOfTodayMillis()
+    val endTime = System.currentTimeMillis()
 
     val pm = context.packageManager
-    usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startTime, endTime)
-        .filter { it.totalTimeInForeground > 0 && it.packageName != context.packageName }
-        .sortedByDescending { it.totalTimeInForeground }
-        .take(4)
-        .mapNotNull { stat ->
-            pm.getLaunchIntentForPackage(stat.packageName) ?: return@mapNotNull null
-            val appInfo = runCatching { pm.getApplicationInfo(stat.packageName, 0) }.getOrNull()
-                ?: return@mapNotNull null
-            val name = pm.getApplicationLabel(appInfo).toString()
-            TopApp(stat.packageName, name, stat.totalTimeInForeground / 60_000L)
+    val launchablePackages = getLaunchablePackages(pm)
+    val usageByPackage = usm.queryAndAggregateUsageStats(startTime, endTime)
+
+    usageByPackage.entries.asSequence()
+        .filter { (packageName, usageStats) ->
+            usageStats.totalTimeInForeground > 0L &&
+                packageName != context.packageName &&
+                packageName in launchablePackages
         }
+        .mapNotNull { (packageName, usageStats) ->
+            val appInfo = runCatching { pm.getApplicationInfo(packageName, 0) }.getOrNull()
+                ?: return@mapNotNull null
+            val isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+            if (isSystemApp) return@mapNotNull null
+            val name = pm.getApplicationLabel(appInfo).toString()
+            TopApp(packageName, name, usageStats.totalTimeInForeground / 60_000L)
+        }
+        .sortedByDescending { it.minutes }
+        .take(4)
+        .toList()
 }.getOrDefault(emptyList())
 
 // ─── Bottom Bar ──────────────────────────────────────────────────────────────
@@ -632,12 +639,18 @@ internal fun HomeBottomBar(
                 .width(40.dp)
                 .clickableNoRipple(onClick = onNavigateToSettings)
         )
-        Text(
-            text = "Pix",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.clickableNoRipple(onClick = onNavigateToAiScreen)
-        )
+        Row(
+            modifier = Modifier.clickableNoRipple(onClick = onNavigateToAiScreen),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            PixRabbitPixelIcon(modifier = Modifier.size(18.dp))
+            Text(
+                text = "Pix",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -663,16 +676,25 @@ private fun getTodayScreenTimeMinutes(context: Context): Long = runCatching {
     if (mode != AppOpsManager.MODE_ALLOWED) return@runCatching -1L
 
     val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-    val cal = java.util.Calendar.getInstance()
-    val endTime = cal.timeInMillis
-    cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
-    cal.set(java.util.Calendar.MINUTE, 0)
-    cal.set(java.util.Calendar.SECOND, 0)
-    cal.set(java.util.Calendar.MILLISECOND, 0)
-    val startTime = cal.timeInMillis
+    val pm = context.packageManager
+    val startTime = getStartOfTodayMillis()
+    val endTime = System.currentTimeMillis()
+    val launchablePackages = getLaunchablePackages(pm)
 
-    val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startTime, endTime)
-    stats.sumOf { it.totalTimeInForeground } / 60_000L
+    usm.queryAndAggregateUsageStats(startTime, endTime)
+        .entries
+        .asSequence()
+        .filter { (packageName, usageStats) ->
+            usageStats.totalTimeInForeground > 0L &&
+                packageName != context.packageName &&
+                packageName in launchablePackages
+        }
+        .sumOf { (packageName, usageStats) ->
+            val appInfo = runCatching { pm.getApplicationInfo(packageName, 0) }.getOrNull()
+                ?: return@sumOf 0L
+            val isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+            if (isSystemApp) 0L else usageStats.totalTimeInForeground
+        } / 60_000L
 }.getOrDefault(-1L)
 
 private fun getScreenTimeAnalytics(context: Context): ScreenTimeAnalytics = runCatching {
@@ -682,10 +704,18 @@ private fun getScreenTimeAnalytics(context: Context): ScreenTimeAnalytics = runC
     val pm = context.packageManager
     val startTime = getStartOfTodayMillis()
     val endTime = System.currentTimeMillis()
+    val launchablePackages = getLaunchablePackages(pm)
+    val eligiblePackages = launchablePackages.filterTo(mutableSetOf()) { packageName ->
+        if (packageName == context.packageName) return@filterTo false
+        val appInfo = runCatching { pm.getApplicationInfo(packageName, 0) }.getOrNull() ?: return@filterTo false
+        (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) == 0
+    }
 
-    val totalByPackage = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startTime, endTime)
-        .filter { it.totalTimeInForeground > 0L }
-        .associate { it.packageName to it.totalTimeInForeground }
+    val totalByPackage = usm.queryAndAggregateUsageStats(startTime, endTime)
+        .mapValues { it.value.totalTimeInForeground }
+        .filter { (packageName, totalTime) ->
+            totalTime > 0L && packageName in eligiblePackages
+        }
 
     val hourlyByPackage = mutableMapOf<String, LongArray>()
     val activeSessions = mutableMapOf<String, Long>()
@@ -695,6 +725,7 @@ private fun getScreenTimeAnalytics(context: Context): ScreenTimeAnalytics = runC
     while (usageEvents.hasNextEvent()) {
         usageEvents.getNextEvent(event)
         val packageName = event.packageName ?: continue
+        if (packageName !in eligiblePackages) continue
         when (event.eventType) {
             UsageEvents.Event.MOVE_TO_FOREGROUND -> {
                 activeSessions[packageName] = event.timeStamp
@@ -718,12 +749,7 @@ private fun getScreenTimeAnalytics(context: Context): ScreenTimeAnalytics = runC
     }
 
     val appStats = totalByPackage.mapNotNull { (packageName, totalMillis) ->
-        if (packageName == context.packageName) return@mapNotNull null
-        val appInfo = runCatching { pm.getApplicationInfo(packageName, 0) }.getOrNull()
-            ?: return@mapNotNull null
-        val isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-        if (isSystemApp) return@mapNotNull null
-        pm.getLaunchIntentForPackage(packageName) ?: return@mapNotNull null
+        val appInfo = runCatching { pm.getApplicationInfo(packageName, 0) }.getOrNull() ?: return@mapNotNull null
         val appLabel = pm.getApplicationLabel(appInfo).toString()
         ScreenTimeAppAnalytics(
             packageName = packageName,
@@ -756,6 +782,17 @@ private fun getStartOfTodayMillis(): Long {
     cal.set(Calendar.SECOND, 0)
     cal.set(Calendar.MILLISECOND, 0)
     return cal.timeInMillis
+}
+
+private fun getLaunchablePackages(packageManager: PackageManager): Set<String> {
+    val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+    val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        packageManager.queryIntentActivities(launcherIntent, PackageManager.ResolveInfoFlags.of(0))
+    } else {
+        @Suppress("DEPRECATION")
+        packageManager.queryIntentActivities(launcherIntent, 0)
+    }
+    return resolveInfos.mapNotNull { it.activityInfo?.packageName }.toSet()
 }
 
 private fun addTimeToHourlyBuckets(

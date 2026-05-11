@@ -84,13 +84,9 @@
     <string name="hide_status_bar">Hide Status Bar</string>
     <string name="show_status_bar">Show Status Bar</string>
     <string name="app_icon">App Icon</string>
-    <string name="credits">Credits</string>
-    <string name="phosphor_icons">Phosphor Icons</string>
     <string name="love_icon">Love icon</string>
-    <string name="made_with">Made with</string>
-    <string name="from_india">from India</string>
-    <string name="twitter_icon">Twitter icon</string>
-    <string name="github_icon">GitHub icon</string>
+    <string name="made_with">made with</string>
+    <string name="from_india">for carrots</string>
     <string name="location_icon">Location icon</string>
     <string name="address_icon">Address icon</string>
     <string name="done_icon">Done icon</string>

@@ -9,6 +9,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.provider.AlarmClock
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -39,9 +40,9 @@ import dagger.hilt.components.SingletonComponent
 import dev.mslalith.focuslauncher.core.common.extensions.openNotificationShade
 import dev.mslalith.focuslauncher.core.screens.HomePageScreen
 import dev.mslalith.focuslauncher.core.ui.effects.OnLifecycleEventChange
+import dev.mslalith.focuslauncher.core.ui.extensions.onEdgeHorizontalSwipe
 import dev.mslalith.focuslauncher.core.ui.extensions.onSwipeDown
 import dev.mslalith.focuslauncher.core.ui.extensions.onSwipeUp
-import dev.mslalith.focuslauncher.core.ui.extensions.onHorizontalSwipe
 import dev.mslalith.focuslauncher.feature.clock24.widget.ClockWidgetUiComponent
 import dev.mslalith.focuslauncher.feature.favorites.FavoritesListUiComponent
 import dev.mslalith.focuslauncher.feature.homepage.widget.MediaPlayerWidget
@@ -203,24 +204,15 @@ private fun HomePageContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 24.dp)
-                .onSwipeDown(enabled = state.isPullDownNotificationShadeEnabled) {
-                    context.openNotificationShade()
-                }
-                .onSwipeUp {
+                .onSwipeDown {
                     onNavigateToAppDrawer()
                 }
-                .onHorizontalSwipe(
-                    onSwipeRight = {
-                        runCatching {
-                            val intent = context.packageManager.getLaunchIntentForPackage("com.google.android.googlequicksearchbox")
-                            if (intent != null) {
-                                context.startActivity(intent)
-                            } else {
-                                val browserIntent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.google.com"))
-                                context.startActivity(browserIntent)
-                            }
-                        }
-                    }
+                .onSwipeUp(enabled = state.isPullDownNotificationShadeEnabled) {
+                    context.openNotificationShade()
+                }
+                .onEdgeHorizontalSwipe(
+                    onSwipeFromLeft = { context.openGoogleDiscover() },
+                    onSwipeFromRight = onNavigateToAiScreen
                 )
         ) {
             Spacer(modifier = Modifier.height(12.dp))
@@ -310,5 +302,17 @@ private fun HomePageContent(
 
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+}
+
+private fun Context.openGoogleDiscover() {
+    runCatching {
+        val intent = packageManager.getLaunchIntentForPackage("com.google.android.googlequicksearchbox")
+            ?: Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.google.com"))
+        startActivity(intent)
+        (this as? ComponentActivity)?.overridePendingTransition(
+            android.R.anim.slide_in_left,
+            android.R.anim.slide_out_right
+        )
     }
 }

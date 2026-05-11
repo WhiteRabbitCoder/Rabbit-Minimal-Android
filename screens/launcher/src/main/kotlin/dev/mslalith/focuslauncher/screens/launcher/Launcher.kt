@@ -29,7 +29,6 @@ import dagger.hilt.components.SingletonComponent
 import dev.mslalith.focuslauncher.core.screens.LauncherScreen
 import dev.mslalith.focuslauncher.core.ui.controller.toggleStatusBars
 import dev.mslalith.focuslauncher.core.ui.effects.OnLifecycleEventChange
-import dev.mslalith.focuslauncher.core.ui.extensions.onHorizontalSwipe
 import dev.mslalith.focuslauncher.core.ui.providers.LocalLauncherPagerState
 import dev.mslalith.focuslauncher.core.ui.providers.LocalSystemUiController
 import dev.mslalith.focuslauncher.core.ui.providers.ProvideLauncherPagerState
@@ -127,10 +126,6 @@ private fun LauncherInternal(
                             onNavigateToSettings = { state.eventSink(LauncherUiEvent.NavigateToSettings) },
                             onNavigateToAppDrawer = { isAppDrawerVisible = true },
                             modifier = Modifier
-                                .onHorizontalSwipe(
-                                    onSwipeLeft = { state.eventSink(LauncherUiEvent.NavigateToAiScreen) },
-                                    onSwipeRight = { coroutineScope.launch { pagerState.animateScrollToPage(page = 0) } }
-                                )
                         )
                     }
                 }
@@ -142,17 +137,8 @@ private fun LauncherInternal(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DiscoveryPage(modifier: Modifier = Modifier) {
-    val pagerState = LocalLauncherPagerState.current
-    val coroutineScope = rememberCoroutineScope()
-
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .onHorizontalSwipe(
-                onSwipeLeft = {
-                    coroutineScope.launch { pagerState.animateScrollToPage(page = 1) }
-                }
-            ),
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Text(

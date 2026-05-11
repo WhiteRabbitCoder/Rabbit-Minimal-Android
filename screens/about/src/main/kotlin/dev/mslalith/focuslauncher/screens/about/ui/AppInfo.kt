@@ -49,8 +49,6 @@ internal fun AppInfo(
             color = MaterialTheme.colorScheme.outline,
             style = MaterialTheme.typography.bodyMedium
         )
-        VerticalSpacer(spacing = 8.dp)
-        SocialAccounts()
     }
 }
 

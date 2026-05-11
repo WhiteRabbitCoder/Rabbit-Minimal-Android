@@ -43,6 +43,7 @@ import com.slack.circuit.codegen.annotations.CircuitInject
 import dagger.hilt.components.SingletonComponent
 import dev.mslalith.focuslauncher.core.resources.R
 import dev.mslalith.focuslauncher.core.screens.AiScreen
+import dev.mslalith.focuslauncher.core.ui.PixRabbitPixelIcon
 import dev.mslalith.focuslauncher.core.ui.effects.OnLifecycleEventChange
 import dev.mslalith.focuslauncher.core.ui.extensions.onHorizontalSwipe
 
@@ -85,7 +86,7 @@ fun AiScreen(
             // Status label
             Text(
                 text = when (state.pixState) {
-                    PixState.IDLE -> "Hola, soy Pix ✦"
+                    PixState.IDLE -> "Hola, soy Pix"
                     PixState.LISTENING -> "Escuchando..."
                     PixState.THINKING -> "Pensando..."
                     PixState.RESPONDING -> "Respondiendo..."
@@ -161,6 +162,8 @@ private fun AiTopBar(onBack: () -> Unit) {
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 4.dp)
         )
+        Spacer(modifier = Modifier.weight(1f))
+        PixRabbitPixelIcon(modifier = Modifier.size(18.dp))
     }
 }
 

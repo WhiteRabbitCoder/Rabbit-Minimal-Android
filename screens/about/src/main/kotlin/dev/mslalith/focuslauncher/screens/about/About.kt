@@ -9,15 +9,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.slack.circuit.codegen.annotations.CircuitInject
 import dagger.hilt.components.SingletonComponent
 import dev.mslalith.focuslauncher.core.screens.AboutScreen
 import dev.mslalith.focuslauncher.core.ui.AppBarWithBackIcon
 import dev.mslalith.focuslauncher.core.ui.FillSpacer
-import dev.mslalith.focuslauncher.core.ui.VerticalSpacer
 import dev.mslalith.focuslauncher.screens.about.ui.AppInfo
-import dev.mslalith.focuslauncher.screens.about.ui.Credits
 import dev.mslalith.focuslauncher.screens.about.ui.MadeWithLove
 
 @CircuitInject(AboutScreen::class, SingletonComponent::class)
@@ -49,9 +46,6 @@ fun About(
             FillSpacer()
             AppInfo()
             FillSpacer()
-
-            Credits()
-            VerticalSpacer(spacing = 24.dp)
             MadeWithLove()
         }
     }
