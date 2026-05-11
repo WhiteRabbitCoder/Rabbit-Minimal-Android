@@ -96,7 +96,7 @@ private fun FavoritesListUiComponent(
             .fillMaxWidth()
             .padding(horizontal = contentPadding)
     ) {
-        favoritesList.forEach { favoriteAppWithColor ->
+        favoritesList.take(4).forEach { favoriteAppWithColor ->
             ReusableContent(key = favoriteAppWithColor.app) {
                 FavoriteItem(
                     appWithColor = favoriteAppWithColor,

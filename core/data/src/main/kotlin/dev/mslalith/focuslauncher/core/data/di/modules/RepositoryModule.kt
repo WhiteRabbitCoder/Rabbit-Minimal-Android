@@ -12,6 +12,7 @@ import dev.mslalith.focuslauncher.core.data.repository.LunarPhaseDetailsRepo
 import dev.mslalith.focuslauncher.core.data.repository.PlacesRepo
 import dev.mslalith.focuslauncher.core.data.repository.QuotesRepo
 import dev.mslalith.focuslauncher.core.data.repository.ThemeRepo
+import dev.mslalith.focuslauncher.core.data.repository.MediaPlayerRepo
 import dev.mslalith.focuslauncher.core.data.repository.impl.AppDrawerRepoImpl
 import dev.mslalith.focuslauncher.core.data.repository.impl.ClockRepoImpl
 import dev.mslalith.focuslauncher.core.data.repository.impl.FavoritesRepoImpl
@@ -20,6 +21,7 @@ import dev.mslalith.focuslauncher.core.data.repository.impl.LunarPhaseDetailsRep
 import dev.mslalith.focuslauncher.core.data.repository.impl.PlacesRepoImpl
 import dev.mslalith.focuslauncher.core.data.repository.impl.QuotesRepoImpl
 import dev.mslalith.focuslauncher.core.data.repository.impl.ThemeRepoImpl
+import dev.mslalith.focuslauncher.core.data.repository.impl.MediaPlayerRepoImpl
 import dev.mslalith.focuslauncher.core.data.repository.impl.settings.AppDrawerSettingsRepoImpl
 import dev.mslalith.focuslauncher.core.data.repository.impl.settings.ClockSettingsRepoImpl
 import dev.mslalith.focuslauncher.core.data.repository.impl.settings.GeneralSettingsRepoImpl
@@ -67,6 +69,10 @@ internal abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindThemeRepo(repo: ThemeRepoImpl): ThemeRepo
+
+    @Binds
+    @Singleton
+    abstract fun bindMediaPlayerRepo(repo: MediaPlayerRepoImpl): MediaPlayerRepo
 
     @Binds
     @Singleton

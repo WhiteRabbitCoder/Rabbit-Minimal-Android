@@ -15,6 +15,8 @@ import dagger.assisted.AssistedInject
 import dagger.hilt.components.SingletonComponent
 import dev.mslalith.focuslauncher.core.data.repository.ClockRepo
 import dev.mslalith.focuslauncher.core.data.repository.WeatherRepo
+import dev.mslalith.focuslauncher.core.data.repository.MediaPlayerRepo
+import dev.mslalith.focuslauncher.core.data.repository.MediaState
 import dev.mslalith.focuslauncher.core.data.repository.settings.GeneralSettingsRepo
 import dev.mslalith.focuslauncher.core.model.Constants.Defaults.Settings.General.DEFAULT_NOTIFICATION_SHADE
 import dev.mslalith.focuslauncher.core.screens.AiScreen
@@ -36,6 +38,7 @@ class HomePagePresenter @AssistedInject constructor(
     private val generalSettingsRepo: GeneralSettingsRepo,
     private val clockRepo: ClockRepo,
     private val weatherRepo: WeatherRepo,
+    private val mediaPlayerRepo: MediaPlayerRepo,
     private val clockWidgetUiComponentPresenter: ClockWidgetUiComponentPresenter,
     private val lunarCalendarUiComponentPresenter: LunarCalendarUiComponentPresenter,
     private val quoteForYouUiComponentPresenter: QuoteForYouUiComponentPresenter,
@@ -56,6 +59,8 @@ class HomePagePresenter @AssistedInject constructor(
         val currentInstant by clockRepo.currentInstantStateFlow
             .collectAsRetainedState(initial = Clock.System.now())
 
+        val mediaState by mediaPlayerRepo.mediaState.collectAsRetainedState(initial = MediaState())
+
         val localDateTime = currentInstant.toLocalDateTime(TimeZone.currentSystemDefault())
         val date = buildDateString(localDateTime)
         val dayProgress = (localDateTime.hour * 60 + localDateTime.minute) / 1440f
@@ -66,6 +71,19 @@ class HomePagePresenter @AssistedInject constructor(
         val yearProgress = dayOfYear / daysInYear.toFloat()
 
         var weatherText by remember { mutableStateOf("—°C") }
+
+        var pomodoroTimeLeft by remember { mutableStateOf(25 * 60) }
+        var pomodoroIsRunning by remember { mutableStateOf(false) }
+
+        androidx.compose.runtime.LaunchedEffect(pomodoroIsRunning) {
+            while (pomodoroIsRunning && pomodoroTimeLeft > 0) {
+                kotlinx.coroutines.delay(1000)
+                pomodoroTimeLeft--
+                if (pomodoroTimeLeft == 0) {
+                    pomodoroIsRunning = false
+                }
+            }
+        }
 
         val clockWidgetUiComponentState = clockWidgetUiComponentPresenter.present()
         val lunarCalendarUiComponentState = lunarCalendarUiComponentPresenter.present()
@@ -78,10 +96,13 @@ class HomePagePresenter @AssistedInject constructor(
             dayProgress = dayProgress,
             yearProgress = yearProgress,
             weatherText = weatherText,
+            mediaState = mediaState,
             clockWidgetUiComponentState = clockWidgetUiComponentState,
             lunarCalendarUiComponentState = lunarCalendarUiComponentState,
             quoteForYouUiComponentState = quoteForYouUiComponentState,
             favoritesListUiComponentState = favoritesListUiComponentState,
+            pomodoroTimeLeft = pomodoroTimeLeft,
+            pomodoroIsRunning = pomodoroIsRunning,
             eventSink = { event ->
                 when (event) {
                     HomePageUiEvent.NavigateToAiScreen -> navigator.goTo(AiScreen)
@@ -91,6 +112,17 @@ class HomePagePresenter @AssistedInject constructor(
                             val temp = weatherRepo.getTemperatureCelsius(event.latitude, event.longitude)
                             if (temp != null) weatherText = "${temp}°C"
                         }
+                    }
+                    HomePageUiEvent.CheckMediaPermission -> mediaPlayerRepo.checkPermissionAndInitialize()
+                    HomePageUiEvent.SkipMediaToNext -> mediaPlayerRepo.skipToNext()
+                    HomePageUiEvent.SkipMediaToPrevious -> mediaPlayerRepo.skipToPrevious()
+                    HomePageUiEvent.ToggleMediaPlayback -> {
+                        if (mediaState.isPlaying) mediaPlayerRepo.pause() else mediaPlayerRepo.play()
+                    }
+                    HomePageUiEvent.TogglePomodoro -> pomodoroIsRunning = !pomodoroIsRunning
+                    HomePageUiEvent.ResetPomodoro -> {
+                        pomodoroIsRunning = false
+                        pomodoroTimeLeft = 25 * 60
                     }
                 }
             }

@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
-internal fun LunarPhaseMoonIcon(
+fun LunarPhaseMoonIcon(
     modifier: Modifier = Modifier,
     phaseAngle: Double,
     illumination: Double,

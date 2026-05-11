@@ -28,11 +28,16 @@ internal class FavoritesRepoImpl @Inject constructor(
         }
 
     override suspend fun addToFavorites(app: App) {
+        val currentFavorites = favoriteAppsDao.getFavoriteAppsFlow().first()
+        if (currentFavorites.size >= 4) return
         favoriteAppsDao.addFavorite(favoriteApp = app.toFavoriteAppRoom())
     }
 
     override suspend fun addToFavorites(apps: List<App>) {
-        val favoriteAppRoomList = apps.map(App::toFavoriteAppRoom)
+        val currentFavorites = favoriteAppsDao.getFavoriteAppsFlow().first()
+        val spaceLeft = 4 - currentFavorites.size
+        if (spaceLeft <= 0) return
+        val favoriteAppRoomList = apps.take(spaceLeft).map(App::toFavoriteAppRoom)
         favoriteAppsDao.addFavorites(favoriteApps = favoriteAppRoomList)
     }
 

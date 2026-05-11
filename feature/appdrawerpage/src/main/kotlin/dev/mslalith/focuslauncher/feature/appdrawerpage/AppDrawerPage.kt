@@ -31,6 +31,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -204,9 +205,11 @@ internal fun AppDrawerPageInternal(
     var usageMap by remember { mutableStateOf(getUsageMap(context)) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    var dragOffsetPx by remember { mutableStateOf(0f) }
     val dismissNestedScrollConnection = rememberDismissNestedScrollConnection(
         listState = listState,
-        onDismissRequest = onDismissRequest
+        onDismissRequest = onDismissRequest,
+        onDrag = { dragOffsetPx = it }
     )
 
     OnDayChangeListener { reloadIconPack() }
@@ -218,6 +221,7 @@ internal fun AppDrawerPageInternal(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .graphicsLayer { this.translationY = dragOffsetPx }
             .nestedScroll(dismissNestedScrollConnection)
             .imePadding()
     ) {
@@ -327,23 +331,38 @@ private fun DrawerSearchField(
 @Composable
 private fun rememberDismissNestedScrollConnection(
     listState: LazyListState,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    onDrag: (Float) -> Unit
 ): NestedScrollConnection {
     val dismissDistancePx = with(LocalDensity.current) { DISMISS_DRAG_DISTANCE_THRESHOLD.toPx() }
 
-    return remember(listState, onDismissRequest, dismissDistancePx) {
+    return remember(listState, onDismissRequest, dismissDistancePx, onDrag) {
         object : NestedScrollConnection {
             private var downwardDragPx = 0f
             private var dismissed = false
 
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (!listState.isScrolledToTop() || available.y <= 0f) {
+                if (!listState.isScrolledToTop()) {
                     downwardDragPx = 0f
                     dismissed = false
+                    onDrag(0f)
+                    return Offset.Zero
+                }
+
+                if (downwardDragPx == 0f && available.y < 0f) {
                     return Offset.Zero
                 }
 
                 downwardDragPx += available.y
+
+                if (downwardDragPx <= 0f) {
+                    downwardDragPx = 0f
+                    dismissed = false
+                    onDrag(0f)
+                    return Offset.Zero
+                }
+
+                onDrag(downwardDragPx)
 
                 if (!dismissed && downwardDragPx >= dismissDistancePx) {
                     dismissed = true
@@ -351,7 +370,14 @@ private fun rememberDismissNestedScrollConnection(
                     return available
                 }
 
-                return Offset.Zero
+                return Offset(0f, available.y)
+            }
+
+            override suspend fun onPreFling(available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
+                downwardDragPx = 0f
+                dismissed = false
+                onDrag(0f)
+                return super.onPreFling(available)
             }
         }
     }

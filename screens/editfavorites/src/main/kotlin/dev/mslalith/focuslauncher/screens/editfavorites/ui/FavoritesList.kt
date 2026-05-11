@@ -31,7 +31,11 @@ internal fun FavoritesList(
             if (selectedApp.isSelected) {
                 onRemoveFromFavorites(selectedApp.app)
             } else {
-                onAddToFavorites(selectedApp.app)
+                if (favorites.count { it.isSelected } >= 4) {
+                    showSnackbar("Maximum 4 pinned apps allowed")
+                } else {
+                    onAddToFavorites(selectedApp.app)
+                }
             }
         } else {
             showSnackbar(context.getString(R.string.app_hidden_message, selectedApp.app.displayName))

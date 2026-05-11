@@ -18,7 +18,7 @@ fun LauncherTheme(
     val systemUiController = LocalSystemUiController.current
 
     LaunchedEffect(key1 = systemUiController) {
-        systemUiController.setSystemBarsColor(color = darkColors.surface)
+        systemUiController.setSystemBarsColor(color = darkColors.background)
     }
 
     MaterialTheme(

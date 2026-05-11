@@ -125,6 +125,7 @@ Hilt is used throughout. Each module has a `di/` package with `@Module` objects.
 - **Alphabet index scroll**: `charIndexAt` maps Y position → character group; `LazyListState.scrollToItem` jumps to that group's item index (one item per group in the LazyColumn)
 - **Search auto-launch**: if filtered results narrow to exactly 1 app, it launches automatically
 - **Screen time**: `UsageStatsManager` reads today's foreground time per package (requires `PACKAGE_USAGE_STATS` permission granted by user); shown as `Xh Ym` or `Xm` next to each app name in the drawer
+- **Drag-to-dismiss**: implemented via `NestedScrollConnection` (`rememberDismissNestedScrollConnection`) attached to the root `Column`. When the list is scrolled to the top and the user drags downward, the connection tracks accumulated drag distance and reports it via an `onDrag(Float)` callback; the `Column` uses `graphicsLayer { translationY = dragOffsetPx }` to follow the finger visually. At 72dp the drawer is dismissed. The connection **consumes** the drag offset (`return Offset(0f, available.y)`) so the list never receives the pull and the Android 12+ overscroll stretch animation is fully suppressed. `onPreFling` resets all state so a short flick that doesn't reach the threshold snaps back cleanly.
 
 ### Home Screen
 - **`HomePagePresenter.kt`**: computes date string, day progress (minutes/1440), year progress (dayOfYear/daysInYear), battery level via `BatteryManager`, weather via `WeatherRepo`
@@ -170,6 +171,8 @@ Hilt is used throughout. Each module has a `di/` package with `@Module` objects.
   Pager horizontal scrolling is disabled (`userScrollEnabled = false`) and gestures are handled explicitly to avoid accidental navigation.
 
 - App Drawer transition update: App Drawer was removed from the `HorizontalPager` and is now rendered as a separate active launcher content state via `AnimatedContent`, so it no longer paints over Home. It enters from the bottom and exits downward. The pager now has only two pages (Discovery and Home). The drawer can be dismissed with Back or by dragging downward at the top of the app list; the drag threshold prevents accidental dismissal while scrolling apps.
+
+- App Drawer drag-to-dismiss fix: The `NestedScrollConnection` in `AppDrawerPage.kt` was reworked so that downward drags at the top of the list physically move the entire drawer via `graphicsLayer { translationY }` instead of being silently absorbed. The connection now consumes the scroll delta (returning `Offset(0f, available.y)`) to suppress the native Android overscroll bounce/stretch animation. An `onPreFling` override resets accumulated drag state when the user lifts without reaching the 72dp threshold. Only upward drags when `downwardDragPx == 0` are ignored, so a real downward pull always feels responsive.
 
 - Tests & lint: Adjusted unit tests and detekt configuration where necessary for touched modules. Changes were verified locally and a dev-debug APK was installed on a connected Samsung device for manual verification.
 

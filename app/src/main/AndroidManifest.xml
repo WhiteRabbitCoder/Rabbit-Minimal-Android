@@ -71,6 +71,15 @@
             android:name="io.sentry.attach-view-hierarchy"
             android:value="true" />
 
+        <service
+            android:name="dev.mslalith.focuslauncher.core.data.service.MediaNotificationListenerService"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
     </application>
 
 </manifest>
