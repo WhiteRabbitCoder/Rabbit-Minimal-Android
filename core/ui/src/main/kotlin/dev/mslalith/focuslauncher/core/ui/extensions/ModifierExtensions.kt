@@ -13,6 +13,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.onSizeChanged
 
+private const val SWIPE_VELOCITY_THRESHOLD_PX_PER_SEC = 600f
+
 inline fun Modifier.modifyIf(
     predicate: () -> Boolean,
     block: Modifier.() -> Modifier
@@ -34,7 +36,6 @@ inline fun Modifier.onSwipeDown(
     enabled: Boolean = true,
     crossinline action: () -> Unit
 ) = composed {
-    val velocityThreshold = 600f
     var yStart = 0f
     var yDrag = 0f
 
@@ -49,7 +50,7 @@ inline fun Modifier.onSwipeDown(
             yDrag += delta
         },
         onDragStopped = { velocity ->
-            if (yStart < yDrag && velocity > velocityThreshold) {
+            if (yStart < yDrag && velocity > SWIPE_VELOCITY_THRESHOLD_PX_PER_SEC) {
                 action()
             }
         }
@@ -60,7 +61,6 @@ inline fun Modifier.onSwipeUp(
     enabled: Boolean = true,
     crossinline action: () -> Unit
 ) = composed {
-    val velocityThreshold = 600f
     var yStart = 0f
     var yDrag = 0f
 
@@ -75,7 +75,7 @@ inline fun Modifier.onSwipeUp(
             yDrag += delta
         },
         onDragStopped = { velocity ->
-            if (yStart > yDrag && velocity < -velocityThreshold) {
+            if (yStart > yDrag && velocity < -SWIPE_VELOCITY_THRESHOLD_PX_PER_SEC) {
                 action()
             }
         }
@@ -87,7 +87,6 @@ inline fun Modifier.onHorizontalSwipe(
     crossinline onSwipeLeft: () -> Unit = {},
     crossinline onSwipeRight: () -> Unit = {}
 ) = composed {
-    val velocityThreshold = 600f
     var xStart = 0f
     var xDrag = 0f
 
@@ -102,9 +101,9 @@ inline fun Modifier.onHorizontalSwipe(
             xDrag += delta
         },
         onDragStopped = { velocity ->
-            if (xStart > xDrag && velocity < -velocityThreshold) {
+            if (xStart > xDrag && velocity < -SWIPE_VELOCITY_THRESHOLD_PX_PER_SEC) {
                 onSwipeLeft()
-            } else if (xStart < xDrag && velocity > velocityThreshold) {
+            } else if (xStart < xDrag && velocity > SWIPE_VELOCITY_THRESHOLD_PX_PER_SEC) {
                 onSwipeRight()
             }
         }
@@ -117,7 +116,6 @@ inline fun Modifier.onEdgeHorizontalSwipe(
     crossinline onSwipeFromLeft: () -> Unit = {},
     crossinline onSwipeFromRight: () -> Unit = {}
 ) = composed {
-    val velocityThreshold = 600f
     val edgeWidthPx = with(LocalDensity.current) { edgeWidth.toPx() }
     var xStart = 0f
     var xDrag = 0f
@@ -137,11 +135,13 @@ inline fun Modifier.onEdgeHorizontalSwipe(
                     xDrag += delta
                 },
                 onDragStopped = { velocity ->
-                    val isLeftEdgeSwipe = xStart <= edgeWidthPx && xDrag > xStart && velocity > velocityThreshold
+                    val isLeftEdgeSwipe = xStart <= edgeWidthPx &&
+                        xDrag > xStart &&
+                        velocity > SWIPE_VELOCITY_THRESHOLD_PX_PER_SEC
                     val isRightEdgeSwipe = layoutWidth > 0f &&
                         xStart >= (layoutWidth - edgeWidthPx) &&
                         xDrag < xStart &&
-                        velocity < -velocityThreshold
+                        velocity < -SWIPE_VELOCITY_THRESHOLD_PX_PER_SEC
 
                     when {
                         isLeftEdgeSwipe -> onSwipeFromLeft()

@@ -3,10 +3,6 @@ package dev.mslalith.focuslauncher.feature.appdrawerpage
 import android.app.AppOpsManager
 import android.app.usage.UsageStatsManager
 import android.content.Context
-import android.content.Intent
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Process
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -58,6 +54,9 @@ import dev.mslalith.focuslauncher.core.circuitoverlay.bottomsheet.showBottomShee
 import dev.mslalith.focuslauncher.core.common.extensions.groupByImmutable
 import dev.mslalith.focuslauncher.core.common.extensions.isAlphabet
 import dev.mslalith.focuslauncher.core.common.extensions.launchApp
+import dev.mslalith.focuslauncher.core.common.extensions.getLaunchablePackages
+import dev.mslalith.focuslauncher.core.common.extensions.getStartOfTodayMillis
+import dev.mslalith.focuslauncher.core.common.extensions.isUserLaunchableApp
 import dev.mslalith.focuslauncher.core.common.model.LoadingState
 import dev.mslalith.focuslauncher.core.model.appdrawer.AppDrawerItem
 import dev.mslalith.focuslauncher.core.screens.AppDrawerPageScreen
@@ -69,7 +68,6 @@ import dev.mslalith.focuslauncher.core.ui.effects.OnDayChangeListener
 import dev.mslalith.focuslauncher.core.ui.effects.OnLifecycleEventChange
 import dev.mslalith.focuslauncher.feature.appdrawerpage.apps.list.AlphabetIndex
 import dev.mslalith.focuslauncher.feature.appdrawerpage.apps.list.AppsList
-import java.util.Calendar
 import kotlinx.coroutines.launch
 
 @CircuitInject(AppDrawerPageScreen::class, SingletonComponent::class)
@@ -396,41 +394,20 @@ private fun getUsageMap(context: Context): Map<String, Long> = runCatching {
     if (mode != AppOpsManager.MODE_ALLOWED) return@runCatching emptyMap()
     val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
     val packageManager = context.packageManager
-    val launchablePackages = getLaunchablePackages(packageManager)
-    val cal = Calendar.getInstance()
-    val endTime = cal.timeInMillis
-    cal.set(Calendar.HOUR_OF_DAY, 0)
-    cal.set(Calendar.MINUTE, 0)
-    cal.set(Calendar.SECOND, 0)
-    cal.set(Calendar.MILLISECOND, 0)
-    val startTime = cal.timeInMillis
+    val launchablePackages = packageManager.getLaunchablePackages()
+    val startTime = getStartOfTodayMillis()
+    val endTime = System.currentTimeMillis()
     usm.queryAndAggregateUsageStats(startTime, endTime)
         .entries
         .asSequence()
         .filter { (packageName, usageStats) ->
             usageStats.totalTimeInForeground > 0L &&
-                packageName != context.packageName &&
-                packageName in launchablePackages
+                packageManager.isUserLaunchableApp(packageName, context.packageName, launchablePackages)
         }
         .mapNotNull { (packageName, usageStats) ->
-            val appInfo = runCatching { packageManager.getApplicationInfo(packageName, 0) }.getOrNull()
-                ?: return@mapNotNull null
-            val isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-            if (isSystemApp) return@mapNotNull null
             packageName to (usageStats.totalTimeInForeground / 60_000L)
         }
         .toMap()
 }.getOrDefault(emptyMap())
-
-private fun getLaunchablePackages(packageManager: PackageManager): Set<String> {
-    val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-    val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        packageManager.queryIntentActivities(launcherIntent, PackageManager.ResolveInfoFlags.of(0))
-    } else {
-        @Suppress("DEPRECATION")
-        packageManager.queryIntentActivities(launcherIntent, 0)
-    }
-    return resolveInfos.mapNotNull { it.activityInfo?.packageName }.toSet()
-}
 
 private val DISMISS_DRAG_DISTANCE_THRESHOLD = 72.dp

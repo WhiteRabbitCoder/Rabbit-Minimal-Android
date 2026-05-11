@@ -7,9 +7,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.BatteryManager
 import android.os.Process
 import android.provider.Settings
@@ -55,6 +52,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.Lifecycle
 import dev.mslalith.focuslauncher.core.common.model.getOrNull
+import dev.mslalith.focuslauncher.core.common.extensions.getLaunchablePackages
+import dev.mslalith.focuslauncher.core.common.extensions.getStartOfTodayMillis
+import dev.mslalith.focuslauncher.core.common.extensions.isUserLaunchableApp
 import dev.mslalith.focuslauncher.core.model.lunarphase.LunarPhase
 import dev.mslalith.focuslauncher.core.ui.PixRabbitPixelIcon
 import dev.mslalith.focuslauncher.core.ui.effects.OnLifecycleEventChange
@@ -606,10 +606,8 @@ private fun getTop4UsedApps(context: Context): List<TopApp> = runCatching {
                 packageName in launchablePackages
         }
         .mapNotNull { (packageName, usageStats) ->
-            val appInfo = runCatching { pm.getApplicationInfo(packageName, 0) }.getOrNull()
-                ?: return@mapNotNull null
-            val isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-            if (isSystemApp) return@mapNotNull null
+            if (!pm.isUserLaunchableApp(packageName, context.packageName, launchablePackages)) return@mapNotNull null
+            val appInfo = runCatching { pm.getApplicationInfo(packageName, 0) }.getOrNull() ?: return@mapNotNull null
             val name = pm.getApplicationLabel(appInfo).toString()
             TopApp(packageName, name, usageStats.totalTimeInForeground / 60_000L)
         }
@@ -690,10 +688,11 @@ private fun getTodayScreenTimeMinutes(context: Context): Long = runCatching {
                 packageName in launchablePackages
         }
         .sumOf { (packageName, usageStats) ->
-            val appInfo = runCatching { pm.getApplicationInfo(packageName, 0) }.getOrNull()
-                ?: return@sumOf 0L
-            val isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-            if (isSystemApp) 0L else usageStats.totalTimeInForeground
+            if (pm.isUserLaunchableApp(packageName, context.packageName, launchablePackages)) {
+                usageStats.totalTimeInForeground
+            } else {
+                0L
+            }
         } / 60_000L
 }.getOrDefault(-1L)
 
@@ -706,9 +705,7 @@ private fun getScreenTimeAnalytics(context: Context): ScreenTimeAnalytics = runC
     val endTime = System.currentTimeMillis()
     val launchablePackages = getLaunchablePackages(pm)
     val eligiblePackages = launchablePackages.filterTo(mutableSetOf()) { packageName ->
-        if (packageName == context.packageName) return@filterTo false
-        val appInfo = runCatching { pm.getApplicationInfo(packageName, 0) }.getOrNull() ?: return@filterTo false
-        (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) == 0
+        pm.isUserLaunchableApp(packageName, context.packageName, launchablePackages)
     }
 
     val totalByPackage = usm.queryAndAggregateUsageStats(startTime, endTime)
@@ -749,7 +746,8 @@ private fun getScreenTimeAnalytics(context: Context): ScreenTimeAnalytics = runC
     }
 
     val appStats = totalByPackage.mapNotNull { (packageName, totalMillis) ->
-        val appInfo = runCatching { pm.getApplicationInfo(packageName, 0) }.getOrNull() ?: return@mapNotNull null
+        val appInfo = runCatching { pm.getApplicationInfo(packageName, 0) }.getOrNull()
+            ?: return@mapNotNull null
         val appLabel = pm.getApplicationLabel(appInfo).toString()
         ScreenTimeAppAnalytics(
             packageName = packageName,
@@ -775,26 +773,7 @@ private fun hasUsageStatsPermission(context: Context): Boolean {
     return mode == AppOpsManager.MODE_ALLOWED
 }
 
-private fun getStartOfTodayMillis(): Long {
-    val cal = Calendar.getInstance()
-    cal.set(Calendar.HOUR_OF_DAY, 0)
-    cal.set(Calendar.MINUTE, 0)
-    cal.set(Calendar.SECOND, 0)
-    cal.set(Calendar.MILLISECOND, 0)
-    return cal.timeInMillis
-}
-
-private fun getLaunchablePackages(packageManager: PackageManager): Set<String> {
-    val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-    val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        packageManager.queryIntentActivities(launcherIntent, PackageManager.ResolveInfoFlags.of(0))
-    } else {
-        @Suppress("DEPRECATION")
-        packageManager.queryIntentActivities(launcherIntent, 0)
-    }
-    return resolveInfos.mapNotNull { it.activityInfo?.packageName }.toSet()
-}
-
+// Splits a foreground interval into per-hour segments and accumulates millis in hourlyBuckets[0..23].
 private fun addTimeToHourlyBuckets(
     startMillis: Long,
     endMillis: Long,

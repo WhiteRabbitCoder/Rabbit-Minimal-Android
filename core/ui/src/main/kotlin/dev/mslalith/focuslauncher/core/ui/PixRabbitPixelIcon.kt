@@ -8,9 +8,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.sqrt
+
+private const val PIX_GRID_SIZE = 24
 
 @Composable
 fun PixRabbitPixelIcon(
@@ -25,7 +25,7 @@ private fun DrawScope.drawPixIcon() {
     val mint = Color(0xFF7FE9B2)
     val white = Color(0xFFFFFFFF)
     val pink = Color(0xFFFF9BC2)
-    val grid = 24
+    val grid = PIX_GRID_SIZE
     val px = min(size.width, size.height) / grid.toFloat()
     val xOffset = (size.width - (grid * px)) / 2f
     val yOffset = (size.height - (grid * px)) / 2f
@@ -81,6 +81,4 @@ private fun DrawScope.drawPixIcon() {
         14 to 20, 15 to 20, 16 to 20, 17 to 20, 18 to 20
     )
     baseSegments.forEach { (x, y) -> pixel(x, y, mint) }
-
-    pixel(max(0, min(23, 11)), 14, Color.Black)
 }
