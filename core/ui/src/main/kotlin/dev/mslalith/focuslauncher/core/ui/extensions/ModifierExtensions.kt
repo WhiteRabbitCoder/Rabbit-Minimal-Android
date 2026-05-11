@@ -107,9 +107,13 @@ inline fun Modifier.onHorizontalSwipe(
                 onSwipeRight()
             }
         }
-    )
+        )
 }
 
+/**
+ * Detects fast horizontal swipes that start near either screen edge.
+ * Calls [onSwipeFromLeft] for left-edge rightward swipes and [onSwipeFromRight] for right-edge leftward swipes.
+ */
 inline fun Modifier.onEdgeHorizontalSwipe(
     enabled: Boolean = true,
     edgeWidth: Dp = 32.dp,

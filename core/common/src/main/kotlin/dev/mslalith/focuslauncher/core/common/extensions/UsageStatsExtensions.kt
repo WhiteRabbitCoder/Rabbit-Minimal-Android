@@ -29,6 +29,9 @@ fun PackageManager.getLaunchablePackages(): Set<String> {
     return resolveInfos.mapNotNull { it.activityInfo?.packageName }.toSet()
 }
 
+/**
+ * Returns true only for user-launchable, non-system apps excluding the launcher app itself.
+ */
 fun PackageManager.isUserLaunchableApp(
     packageName: String,
     selfPackageName: String,

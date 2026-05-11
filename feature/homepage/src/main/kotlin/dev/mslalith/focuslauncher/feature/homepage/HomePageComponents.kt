@@ -359,7 +359,7 @@ private fun ScreenTimeAnalyticsBottomSheet(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = app.displayName.firstOrNull()?.uppercase() ?: "?",
+                                            text = app.displayName.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
                                             style = MaterialTheme.typography.labelSmall
                                         )
                                     }
@@ -773,7 +773,9 @@ private fun hasUsageStatsPermission(context: Context): Boolean {
     return mode == AppOpsManager.MODE_ALLOWED
 }
 
-// Splits a foreground interval into per-hour segments and accumulates millis in hourlyBuckets[0..23].
+/**
+ * Splits a foreground interval into hour-sized segments and accumulates milliseconds in [hourlyBuckets] (0..23).
+ */
 private fun addTimeToHourlyBuckets(
     startMillis: Long,
     endMillis: Long,
