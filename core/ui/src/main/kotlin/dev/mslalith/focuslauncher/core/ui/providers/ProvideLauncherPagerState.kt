@@ -21,7 +21,7 @@ fun ProvideLauncherPagerState(
 ) {
     val pagerState = rememberPagerState(
         initialPage = 1,
-        pageCount = { 3 }
+        pageCount = { 2 }
     )
     CompositionLocalProvider(LocalLauncherPagerState provides pagerState) {
         content()

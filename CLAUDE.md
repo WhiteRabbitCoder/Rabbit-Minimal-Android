@@ -54,12 +54,13 @@ The project uses a layered multi-module architecture:
 - **`screens/`** — Full-screen Circuit screen implementations that compose features together (launcher, editfavorites, hideapps, currentplace, iconpack, about, developer)
   - **`screens/aiscreen/`** — AI chat screen with Pix (rabbit mascot), mock responses
 
-### Pager Layout (3 pages)
+### Launcher Navigation Layout
 
 `HorizontalPager` in `screens/launcher/Launcher.kt`:
 - **Page 0** — Discovery (placeholder, Google feed placeholder)
 - **Page 1** — Home (default page; `ON_RESUME` always animates back here)
-- **Page 2** — App Drawer
+
+App Drawer is **not** a pager page and is not drawn over Home. `Launcher.kt` swaps the active launcher content with `AnimatedContent`: Home/Discovery leaves the scene while App Drawer enters vertically from the bottom. Back dismisses it. A downward drag also dismisses it only when the apps list is already scrolled to the top and the drag passes a 72dp threshold, avoiding conflicts with normal list scrolling.
 
 Settings is **not** a pager page — it is pushed as a Circuit screen via `Navigator` from a gear icon on Home. AI screen is also pushed via `Navigator` from Home.
 
@@ -167,6 +168,8 @@ Hilt is used throughout. Each module has a `di/` package with `@Module` objects.
   - Swipe left (finger moves left) → open Pix (AI)
   - Swipe right (finger moves right) → open Discovery
   Pager horizontal scrolling is disabled (`userScrollEnabled = false`) and gestures are handled explicitly to avoid accidental navigation.
+
+- App Drawer transition update: App Drawer was removed from the `HorizontalPager` and is now rendered as a separate active launcher content state via `AnimatedContent`, so it no longer paints over Home. It enters from the bottom and exits downward. The pager now has only two pages (Discovery and Home). The drawer can be dismissed with Back or by dragging downward at the top of the app list; the drag threshold prevents accidental dismissal while scrolling apps.
 
 - Tests & lint: Adjusted unit tests and detekt configuration where necessary for touched modules. Changes were verified locally and a dev-debug APK was installed on a connected Samsung device for manual verification.
 
