@@ -20,7 +20,7 @@
     </queries>
 
     <application
-        android:name=".FocusLauncherApp"
+        android:name="dev.mslalith.focuslauncher.FocusLauncherApp"
         android:allowBackup="true"
         android:fullBackupOnly="true"
         android:icon="@mipmap/ic_launcher"
@@ -34,7 +34,7 @@
             tools:targetApi="q" />
 
         <activity
-            android:name=".LauncherActivity"
+            android:name="dev.mslalith.focuslauncher.LauncherActivity"
             android:clearTaskOnLaunch="true"
             android:excludeFromRecents="true"
             android:exported="true"
@@ -56,7 +56,7 @@
             android:name="io.sentry.auto-init"
             android:value="false" />
         <meta-data
-            android:name="dev.mslalith.focuslauncher.sentryDsn"
+            android:name="com.whiterabbit.rabbitlauncher.sentryDsn"
             android:value="${sentryDsn}" />
         <meta-data
             android:name="io.sentry.environment"

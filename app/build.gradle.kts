@@ -10,13 +10,13 @@ plugins {
 }
 
 android {
-    namespace = "dev.mslalith.focuslauncher"
+    namespace = "com.whiterabbit.rabbitlauncher"
 
     defaultConfig {
-        applicationId = "dev.mslalith.focuslauncher"
+        applicationId = "com.whiterabbit.rabbitlauncher"
         versionCode = 15
         versionName = "0.9.0"
-        setProperty("archivesBaseName", "Focus-Launcher-v$versionName")
+        setProperty("archivesBaseName", "Rabbit-Minimal-Launcher-v$versionName")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -71,16 +71,16 @@ koverReport {
                 classes(
                     "dagger.hilt.internal.aggregatedroot.codegen.**",
                     "hilt_aggregated_deps.**",
-                    "dev.mslalith.focuslauncher.**.*_Factory*",
-                    "dev.mslalith.focuslauncher.**.*_Impl*",
+                    "com.whiterabbit.rabbitlauncher.**.*_Factory*",
+                    "com.whiterabbit.rabbitlauncher.**.*_Impl*",
                     "dev.mslalith.**.*Hilt*",
                     "dev.mslalith.**.*_MembersInjector",
                     "dev.mslalith.**.BuildConfig",
-                    "dev.mslalith.focuslauncher.**.di.**",
-                    "dev.mslalith.focuslauncher.**.model.**",
+                    "com.whiterabbit.rabbitlauncher.**.di.**",
+                    "com.whiterabbit.rabbitlauncher.**.model.**",
                     // Circuit
-                    "dev.mslalith.focuslauncher.**.*Factory",
-                    "dev.mslalith.focuslauncher.**.*FactoryModule"
+                    "com.whiterabbit.rabbitlauncher.**.*Factory",
+                    "com.whiterabbit.rabbitlauncher.**.*FactoryModule"
                 )
                 annotatedBy(
                     "androidx.compose.runtime.Composable",

@@ -50,7 +50,7 @@ class StartupBenchmarks {
     fun startupCompilationBaselineProfiles() = benchmark(CompilationMode.Partial(BaselineProfileMode.Require))
 
     private fun benchmark(compilationMode: CompilationMode) = rule.measureRepeated(
-        packageName = "dev.mslalith.focuslauncher.dev",
+        packageName = "com.whiterabbit.rabbitlauncher.dev",
         metrics = listOf(StartupTimingMetric()),
         compilationMode = compilationMode,
         startupMode = StartupMode.COLD,

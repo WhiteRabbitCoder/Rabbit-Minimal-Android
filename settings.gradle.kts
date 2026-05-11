@@ -25,7 +25,7 @@ buildCache {
     }
 }
 
-rootProject.name = "FocusLauncher"
+rootProject.name = "RabbitMinimalLauncher"
 include(
     ":app",
     ":baselineprofile",

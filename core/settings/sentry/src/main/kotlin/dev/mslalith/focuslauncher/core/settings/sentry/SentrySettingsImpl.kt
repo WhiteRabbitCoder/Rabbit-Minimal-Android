@@ -30,7 +30,7 @@ class SentrySettingsImpl @Inject constructor(
         } else {
             context.packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
         }
-        applicationInfo.metaData.getString("dev.mslalith.focuslauncher.sentryDsn", "")
+        applicationInfo.metaData.getString("com.whiterabbit.rabbitlauncher.sentryDsn", "")
     } catch (e: PackageManager.NameNotFoundException) {
         ""
     }

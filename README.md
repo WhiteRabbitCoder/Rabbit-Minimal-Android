@@ -1,4 +1,4 @@
-# Focus Launcher
+# Rabbit Minimal Launcher
 
 [![Build](https://img.shields.io/github/actions/workflow/status/mslalith/focus_launcher/build.yml)](https://github.com/mslalith/focus_launcher/actions/workflows/build.yml)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/mslalith/focus_launcher?label=Release)
@@ -6,11 +6,11 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](/LICENSE)
 
 <div style="display:flex">
-  <a href="https://play.google.com/store/apps/details?id=dev.mslalith.focuslauncher">
+  <a href="https://play.google.com/store/apps/details?id=com.whiterabbit.rabbitlauncher">
       <img height="80" alt="Get it on Google Play" src="https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png" />
   </a>
 
-  <a href="https://apt.izzysoft.de/fdroid/index/apk/dev.mslalith.focuslauncher/">
+  <a href="https://apt.izzysoft.de/fdroid/index/apk/com.whiterabbit.rabbitlauncher/">
       <img height="80" alt="Get it on IzzyOnDroid" src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" />
   </a>
 </div>

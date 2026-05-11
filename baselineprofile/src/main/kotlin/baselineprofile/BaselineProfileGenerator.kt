@@ -44,7 +44,7 @@ class BaselineProfileGenerator {
 
     @Test
     fun generate() = rule.collect(
-        packageName = "dev.mslalith.focuslauncher.dev",
+        packageName = "com.whiterabbit.rabbitlauncher.dev",
         maxIterations = 9,
         stableIterations = 3,
 
