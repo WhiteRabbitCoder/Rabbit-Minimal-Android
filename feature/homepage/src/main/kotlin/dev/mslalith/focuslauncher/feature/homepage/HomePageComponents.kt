@@ -75,7 +75,7 @@ private data class ScreenTimeAppAnalytics(
     val packageName: String,
     val displayName: String,
     val totalMillis: Long,
-    val hourlyMillis: LongArray
+    val hourlyMillis: List<Long>
 )
 
 // ─── Progress Section ───────────────────────────────────────────────────────
@@ -263,7 +263,7 @@ private fun ScreenTimeAnalyticsBottomSheet(
             selectedPackage = appList.first().packageName
         }
     }
-    val selectedApp = appList.firstOrNull { it.packageName == selectedPackage } ?: appList.firstOrNull()
+    val selectedApp = appList.firstOrNull { it.packageName == selectedPackage }
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -729,7 +729,7 @@ private fun getScreenTimeAnalytics(context: Context): ScreenTimeAnalytics = runC
             packageName = packageName,
             displayName = appLabel,
             totalMillis = totalMillis,
-            hourlyMillis = hourlyByPackage[packageName] ?: LongArray(24)
+            hourlyMillis = hourlyByPackage[packageName]?.toList() ?: List(24) { 0L }
         )
     }.sortedByDescending { it.totalMillis }
 
@@ -764,16 +764,19 @@ private fun addTimeToHourlyBuckets(
     hourlyBuckets: LongArray
 ) {
     var current = startMillis
+    val currentCalendar = Calendar.getInstance()
+    val nextBoundaryCalendar = Calendar.getInstance()
     while (current < endMillis) {
-        val calendar = Calendar.getInstance().apply { timeInMillis = current }
-        val hourOfDay = calendar.get(Calendar.HOUR_OF_DAY).coerceIn(0, 23)
-        val nextHourBoundary = Calendar.getInstance().apply {
+        currentCalendar.timeInMillis = current
+        val hourOfDay = currentCalendar.get(Calendar.HOUR_OF_DAY).coerceIn(0, 23)
+        nextBoundaryCalendar.apply {
             timeInMillis = current
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
             add(Calendar.HOUR_OF_DAY, 1)
-        }.timeInMillis
+        }
+        val nextHourBoundary = nextBoundaryCalendar.timeInMillis
         val segmentEnd = minOf(endMillis, nextHourBoundary)
         hourlyBuckets[hourOfDay] += (segmentEnd - current).coerceAtLeast(0L)
         current = segmentEnd
